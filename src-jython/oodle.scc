@@ -1,0 +1,204 @@
+Package cps450.oodle;
+
+Helpers
+  letter = ['A'..'Z'] | ['a'..'z'];
+  digit =  ['0'..'9'];
+
+  cr =        13;
+  lf =        10;
+  not_cr_lf = [[0..127] - [cr + lf]];
+
+  tab =   9;
+  space = ' ';
+  ws =    (tab | space);
+
+  esc_seq_char = [[[[['t' + 'n'] + 'f'] + 'r'] + '"'] + '\'];
+  esc_seq_octal= ['0'..'7']['0'..'7']['0'..'7'];
+  esc_seq =      '\'(esc_seq_char | esc_seq_octal);
+
+Tokens
+  kw_and =      'and';
+  kw_boolean =  'boolean';
+  kw_begin =    'begin';
+  kw_class =    'class';
+  kw_else =     'else';
+  kw_end =      'end';
+  kw_false =    'false';
+  kw_from =     'from';
+  kw_if =       'if';
+  kw_inherits = 'inherits';
+  kw_int =      'int';
+  kw_is =       'is';
+  kw_loop =     'loop';
+  kw_me =       'me';
+  kw_new =      'new';
+  kw_not =      'not';
+  kw_null =     'null';
+  kw_or =       'or';
+  kw_string =   'string';
+  kw_then =     'then';
+  kw_true =     'true';
+  kw_while =    'while';
+  
+  op_assign = ':=';
+  
+  op_lt_eq = '<=';
+  op_gt_eq = '>=';
+  op_lt =    '<';
+  op_gt =    '>';
+  op_eq =    '=';
+  
+  op_concat = '&';
+
+  op_plus =  '+';
+  op_minus = '-';
+  op_mult =  '*';
+  op_div =   '/';
+  
+  misc_comma =     ',';
+  misc_colon =     ':';
+  misc_semicolon = ';';
+  misc_period =    '.';
+
+  misc_l_paren = '(';
+  misc_r_paren = ')';
+  
+  misc_l_brack = '[';
+  misc_r_brack = ']';
+
+  id = ('_' | letter) ('_' | letter | digit)*;
+
+  int_lit = '-'? digit+;
+  
+  str_lit =              '"' (esc_seq | [[not_cr_lf - '"'] - '\'])*  '"';
+  str_lit_unterminated = '"' (esc_seq | [[not_cr_lf - '"'] - '\'])*;
+  str_lit_illegal =      '"' ([not_cr_lf - '"'])*  '"';
+
+  eol = cr | lf | cr lf;
+  
+  line_cont = ws+ '_' (cr | lf | cr lf);
+
+  blank = ws+;
+
+  comment = '~' not_cr_lf*;
+  
+  illegal_char = [0..127];
+
+Ignored Tokens
+  line_cont, blank, comment;
+  
+Productions
+	start = [cr1]:cr_star klass_list;
+  
+	cr_star = T.eol*;
+  
+	cr_plus = T.eol+;
+	
+	klass_list = {single} [head]:klass cr_star
+	           | {multi} [head]:klass cr_plus [tail]:klass_list;
+
+	klass = klass_header
+            klass_body
+            klass_footer;
+
+	klass_header =   T.kw_class T.id klass_inherits? T.kw_is cr_plus;
+	klass_inherits = T.kw_inherits T.kw_from T.id;
+	klass_body =     klass_var* method*;
+	klass_footer =   T.kw_end T.id;
+	
+	klass_var = var;
+
+	var = T.id var_type? var_assign? cr_plus;
+  
+	var_type = T.misc_colon type;
+
+	var_assign = T.op_assign expr;
+	
+	method_var = var;
+	
+	method_sig = T.id T.misc_l_paren arg_list? T.misc_r_paren var_type?;
+  
+	method = method_sig T.kw_is [cr1]:cr_plus
+             method_var*
+             T.kw_begin [cr2]:cr_plus
+             stmt_list
+             T.kw_end T.id [cr3]:cr_plus;
+
+	arg_list =      arg arg_list_tail*;
+	arg_list_tail = T.misc_semicolon arg;
+  
+	arg = T.id T.misc_colon type;
+
+	stmt_list =  stmt_line*;
+
+	stmt_line = stmt cr_plus;
+
+	stmt = {assign} T.id arr_expr_list? T.op_assign expr
+         | {if} [if1]:T.kw_if expr T.kw_then cr_plus
+                stmt_list
+                stmt_else?
+                T.kw_end [if2]:T.kw_if
+         | {loop} [lp1]:T.kw_loop T.kw_while expr cr_plus
+                  stmt_list
+                  T.kw_end [lp2]:T.kw_loop
+         | {call} call;
+
+	stmt_else = T.kw_else cr_plus stmt_list;
+
+	type = {int} T.kw_int
+         | {string} T.kw_string
+         | {bool} T.kw_boolean
+         | {udt} T.id
+         | {array} type T.misc_l_brack expr? T.misc_r_brack ;
+
+	expr = {or}    [e1]:expr1 T.kw_or [e2]:expr1
+	     | {other} expr1;
+
+	expr1 = {and}   [e1]:expr1 T.kw_and [e2]:expr2
+	      | {other} expr2;
+
+	expr2 = {lte}   [e1]:expr3 T.op_lt_eq [e2]:expr3
+	      | {gte}   [e1]:expr3 T.op_gt_eq [e2]:expr3
+          | {lt}    [e1]:expr3 T.op_lt    [e2]:expr3
+          | {gt}    [e1]:expr3 T.op_gt    [e2]:expr3
+          | {eq}    [e1]:expr3 T.op_eq    [e2]:expr3
+          | {other} expr3;
+
+	expr3 = {concat} [e1]:expr3 T.op_concat [e2]:expr4
+	      | {other}  expr4;
+
+	expr4 = {add}   [e1]:expr4 T.op_plus  [e2]:expr5
+          | {sub}   [e1]:expr4 T.op_minus [e2]:expr5
+          | {other} expr5;
+
+    expr5 = {mult}  [e1]:expr5 T.op_mult [e2]:expr8
+          | {div}   [e1]:expr5 T.op_div [e2]:expr8
+          | {other} expr8;
+          
+    expr8 = {pos}   op_plus expr9
+          | {neg}   op_minus expr9
+          | {not}   T.kw_not expr9
+          | {other} expr9;
+
+	expr9 = {id}    T.id
+          | {str}   T.str_lit
+          | {int}   T.int_lit
+          | {true}  T.kw_true
+          | {false} T.kw_false
+          | {null}  T.kw_null
+          | {me}    T.kw_me
+          | {new}   T.kw_new type
+          | {par}   T.misc_l_paren expr T.misc_r_paren
+          | {array} T.id arr_expr_list
+          | {call} call;
+
+	arr_expr_list =      T.misc_l_brack expr T.misc_r_brack arr_expr_list_tail*;
+	arr_expr_list_tail = T.misc_l_brack expr T.misc_r_brack;
+
+	expr_list =      expr expr_list_tail*;
+	expr_list_tail = T.misc_comma expr;
+	
+	call = obj_expr? T.id T.misc_l_paren expr_list? T.misc_r_paren;
+
+	obj_expr = expr9 T.misc_period;
+

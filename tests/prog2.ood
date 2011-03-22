@@ -1,0 +1,20 @@
+~ This is a comment
+
+class Main is
+	x: int        ~ x coord
+	name: string  ~ identifier
+	x_init: int := 5
+	
+	start() is
+	begin
+	end start
+
+	start(a: int ; b: boolean ; c: int) : int is
+		i: int := 25
+		begin
+			print("Hey,\"Sue!\"" & name)
+	end start
+end Main
+
+class Main is
+end Main

@@ -1,0 +1,22 @@
+~ Test1.ood
+
+class Main is
+i: int := 10
+j: string := "yo"
+end Main
+
+
+class Main2 inherits from Main is
+
+i: int := 10
+j: string := "yo"
+
+start() is
+begin
+	if i + 5 then
+		i[5][1 + 2] = 5
+	else
+	end if
+end start
+
+end Main2

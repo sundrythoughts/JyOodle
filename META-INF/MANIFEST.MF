@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: oodle_jython
+Bundle-SymbolicName: oodle_jython
+Bundle-Version: 1.0.0.qualifier
+Export-Package: cps450.oodle.analysis,
+ cps450.oodle.lexer,
+ cps450.oodle.node,
+ cps450.oodle.parser,
+ oodle
+Require-Bundle: org.junit

@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Main-Class: org.python.util.JarRunner
+Class-Path: jython.jar
+

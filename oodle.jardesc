@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<jardesc>
+    <jar path="oodle-jython/oodle.jar"/>
+    <options buildIfNeeded="true" compress="true" descriptionLocation="/oodle-jython/oodle.jardesc" exportErrors="false" exportWarnings="true" includeDirectoryEntries="false" overwrite="false" saveDescription="true" storeRefactorings="false" useSourceFolders="true"/>
+    <storedRefactorings deprecationInfo="true" structuralOnly="false"/>
+    <selectedProjects/>
+    <manifest generateManifest="false" manifestLocation="/oodle-jython/manifest.mf" manifestVersion="1.0" reuseManifest="false" saveManifest="false" usesManifest="true">
+        <sealing sealJar="false">
+            <packagesToSeal/>
+            <packagesToUnSeal/>
+        </sealing>
+    </manifest>
+    <selectedElements exportClassFiles="true" exportJavaFiles="true" exportOutputFolder="false">
+        <file path="/oodle-jython/build.xml"/>
+        <javaElement handleIdentifier="=oodle-jython/gen-src"/>
+        <file path="/oodle-jython/.project"/>
+        <file path="/oodle-jython/oodle.jardesc"/>
+        <file path="/oodle-jython/.pydevproject"/>
+        <file path="/oodle-jython/.classpath"/>
+        <file path="/oodle-jython/manifest.mf"/>
+        <file path="/oodle-jython/prog.ood"/>
+        <file path="/oodle-jython/build.properties"/>
+        <javaElement handleIdentifier="=oodle-jython/src-jython"/>
+        <folder path="/oodle-jython/lib"/>
+    </selectedElements>
+</jardesc>

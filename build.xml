@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<project default="generate_scanner_parser" basedir=".">
+    <property name="grammar.file" value="oodle.scc"/>
+
+    <taskdef name="sablecc" classname="org.sablecc.ant.taskdef.Sablecc"
+        classpath="lib/sablecc-anttask.jar;lib/sablecc.jar" />
+        
+    <target name="generate_scanner_parser" depends="clean">
+        <mkdir dir="gen-src"/>
+        <sablecc src="src-jython" includes="${grammar.file}" 
+                 outputdirectory="gen-src" /> 
+
+    </target>
+
+    <target name="clean">
+        <delete dir="gen-src"/>
+    </target>
+</project>

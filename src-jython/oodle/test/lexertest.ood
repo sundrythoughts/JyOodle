@@ -1,0 +1,20 @@
+~Lexer Unit Test
+
+bool_var: boolean := (true or false)
+	int_var: int := 1 * 50 + 7
+str_legal: string := "Hello\tPeople\nWelcome to my\"World\"!\\\000\123\777\765\432\011"
+str_illegal: string := "Hello\sPeople\cWelcome to my\'World\'!\900\823\787\769\432\091"
+str_unterm: string := "Hello World\"
+class Derived inherits from Base is
+	factorial (int i) : int is
+	begin
+		if i > 12 then
+			~return because number will be too large
+		else
+			fac := 1
+			loop while i > 0
+				fac := fac * i
+			end loop
+			~I'm not sure how to do a return statement
+		end if
+	end factorial
