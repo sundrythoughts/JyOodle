@@ -21,10 +21,10 @@ class Oodle:
 		pass
 
 def main():
-	if len(sys.argv) < 1:
+	if len(sys.argv) < 2:
 		print "usage:"
 		print "  java Oodle filename"
-		sys.exit(1)
+		return
 
 	G.options().parseArgs(sys.argv[1:])
 

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<jardesc>
+    <jar path="jyoodle/jyoodle.jar"/>
+    <options buildIfNeeded="true" compress="true" descriptionLocation="/jyoodle/jyoodle.jardesc" exportErrors="false" exportWarnings="true" includeDirectoryEntries="false" overwrite="false" saveDescription="true" storeRefactorings="false" useSourceFolders="true"/>
+    <storedRefactorings deprecationInfo="true" structuralOnly="false"/>
+    <selectedProjects/>
+    <manifest generateManifest="false" manifestLocation="/jyoodle/manifest.mf" manifestVersion="1.0" reuseManifest="false" saveManifest="true" usesManifest="true">
+        <sealing sealJar="false">
+            <packagesToSeal/>
+            <packagesToUnSeal/>
+        </sealing>
+    </manifest>
+    <selectedElements exportClassFiles="true" exportJavaFiles="true" exportOutputFolder="false">
+        <file path="/jyoodle/manifest.mf"/>
+        <javaElement handleIdentifier="=jyoodle/src-jython"/>
+        <javaElement handleIdentifier="=jyoodle/gen-src"/>
+        <file path="/jyoodle/.classpath"/>
+        <file path="/jyoodle/.pydevproject"/>
+        <file path="/jyoodle/build.properties"/>
+        <file path="/jyoodle/.project"/>
+        <file path="/jyoodle/jyoodle.jardesc"/>
+        <file path="/jyoodle/build.xml"/>
+    </selectedElements>
+</jardesc>
