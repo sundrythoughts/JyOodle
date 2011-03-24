@@ -738,21 +738,22 @@ class SemanticChecker(DepthFirstAdapter):
 		'''Manage 'equal to' expr2 expression
 		   Error Conditions
 		    * lhs type != rhs type
-		    * lhs_type != (Type.INT | Type.STRING)
-		    * rhs_type != (Type.INT | Type.STRING)'''
+		    * lhs_type != (Type.INT | Type.STRING | Type.BOOLEAN)
+		    * rhs_type != (Type.INT | Type.STRING | Type.BOOLEAN)'''
 		self.printFunc(self.outAEqExpr2, node)
 		ln = node.getOpEq().getLine()
 		(lhs, rhs, tp_lhs, tp_rhs) = self.readBinExpr(node)
 		
 		#operand types must be INT xor STRING
-		tp_ret = self.checkBinExprTypes(node, [Type.INT, Type.STRING])
+		tp_ret = self.checkBinExprTypes(node, [Type.INT, Type.STRING, Type.BOOLEAN])
 		
 		#incorrect operand types
 		if tp_ret == Type.NONE:
 			G.errors().semantic().add("'" + node.toString().strip() +
 									  "' comparison requires 2 operands of type " +
 									  Type.INT.name() + " or " +
-									  Type.STRING.name(), ln)
+									  Type.STRING.name() + ' or ' +
+									  Type.BOOLEAN.name(), ln)
 		else:
 			tp_ret = Type.BOOLEAN
 		self.typeMap[node] = tp_ret

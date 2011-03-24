@@ -2,9 +2,13 @@
 
 class Main is
 	x: int
+	b: boolean
 	start() is
 	begin
 		x := 10 + 5
-		x := x - 2
+		x := (x - 3) / 4 * 10
+		b := true or false = true
+		b := not(10 = 5)
+		x := -(10)
 	end start
 end Main
