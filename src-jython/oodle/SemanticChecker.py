@@ -18,7 +18,7 @@ class SemanticChecker(DepthFirstAdapter):
 	###########################################################################
 	def printFunc(self, f, node=None):
 		n = (': ' + node.toString().strip()) if node else ''
-		print f.__name__ + n
+		print 'SemanticChecker: ' + f.__name__ + n
 	
 	###########################################################################
 	## Methods to help with querying/modifying the SymbolTable               ##

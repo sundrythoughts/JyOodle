@@ -8,6 +8,7 @@ from cps450.oodle.lexer import LexerException
 from cps450.oodle.node import *
 from cps450.oodle.parser import ParserException
 from oodle.SemanticChecker import SemanticChecker
+from oodle.CodeGenx86 import CodeGenx86
 from java.io import *
 import sys
 
@@ -24,7 +25,7 @@ def main():
 	if len(sys.argv) < 2:
 		print "usage:"
 		print "  java Oodle filename"
-		return
+		sys.exit(-1)
 
 	G.options().parseArgs(sys.argv[1:])
 
@@ -49,9 +50,15 @@ def main():
 	#perform semantic checks (new code)
 	sem_check = SemanticChecker()
 	st_node.apply(sem_check)  #invoke SemanticChecker traversal
-	#sem_check.printTypeMap()
-	G.symTab().printTable()
-	G.errors().printErrors()
+
+	if G.errors().hasErrors():
+		G.symTab().printTable()
+		G.errors().printErrors()
+		sys.exit(-1)
+	
+	code_gen = CodeGenx86()
+	st_node.apply(code_gen)
+	code_gen.printAsm()
 
 if __name__ == "__main__":
 	main()

@@ -1,9 +1,10 @@
 ~ This is a comment
 
 class Main is
-	x: int := 10
+	x: int
 	start() is
-		x:int := 5
 	begin
+		x := 10 + 5
+		x := x - 2
 	end start
 end Main
