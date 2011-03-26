@@ -81,9 +81,10 @@ def main():
 		G.errors().printErrors()
 		sys.exit(-1)
 	
-	code_gen = CodeGenx86()
-	st_node.apply(code_gen)
-	code_gen.printAsm()
+	if G.options().generateAssembly():
+		code_gen = CodeGenx86()
+		st_node.apply(code_gen)
+		code_gen.printAsm()
 
 if __name__ == "__main__":
 	main()

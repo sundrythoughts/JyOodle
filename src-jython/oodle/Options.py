@@ -41,6 +41,7 @@ class Options:
 		self.m_opts = dict() #{str:bool}
 		self.m_files = list() #[str]
 		self.m_opts['-ds'] = False
+		self.m_opts['-S'] = False
 		self.m_print_debug = False
 
 	def parseArgs(self, args):
@@ -59,6 +60,10 @@ class Options:
 	def displayTokens(self):
 		'''[Option = -ds] -> should tokens be displayed or not'''
 		return self.m_opts['-ds']
+
+	def generateAssembly(self):
+		'''[Option = -S] -> should generate assembly or not'''
+		return self.m_opts['-S']
 
 	def printDebug(self):
 		return self.m_print_debug
