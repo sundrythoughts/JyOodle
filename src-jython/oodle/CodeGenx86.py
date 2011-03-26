@@ -36,22 +36,33 @@ class CodeGenx86(DepthFirstAdapter):
 	''''''
 	def __init__(self):
 		DepthFirstAdapter.__init__(self)
-		self.typeMap = dict() #HashMap<Node,Type>
+		self.typeMap = dict()       #dict<Node,Type>
 		
 		self.hack_has_class = False #HACK for MiniOodle
 		self.valid_scope = False
-		self.asm_list = []
-		self.label_counter = 0
+		self.asm_list = []          #list of asm instructions
+		self.label_counter = 0      #unique counter for label generation
 
 	def prefix(self):
+		'''Get the proper prefix for asm variables'''
 		return '_'
 
 	def writeAsm(self, asm_str):
-		self.asm_list.append(asm_str)
+		'''add asm to list
+		   also add tabs to output for prettier printing'''
+		self.asm_list.append('\t' + asm_str.replace('\n', '\n\t'))
 
-	def writeAsmComment(self, com_str, ln):
+	def writeAsmLabel(self, lbl_str):
+		'''add asm labels to list'''
+		self.asm_list.append(lbl_str + ':')
+
+	def writeAsmComment(self, com_str, ln=None):
+		'''add asm comments and line number to list'''
 		com_str = com_str.strip().replace('\n', '\n#')
-		self.asm_list.append('#Line ' + str(ln) + ': ' + com_str)
+		if ln:
+			self.asm_list.append('#Line ' + str(ln) + ': ' + com_str)
+		else:
+			self.asm_list.append('# ' + com_str)
 	
 	def printAsm(self):
 		for l in self.asm_list:
@@ -66,7 +77,8 @@ class CodeGenx86(DepthFirstAdapter):
 	###########################################################################
 	def printFunc(self, f, node=None):
 		n = (': ' + node.toString().strip()) if node else ''
-		print 'CodeGenx86: ' + f.__name__ + n
+		if G.options().printDebug():
+			print 'CodeGenx86: ' + f.__name__ + n
 
 	###########################################################################
 	## Methods to help with querying/modifying the SymbolTable			   ##
@@ -90,30 +102,11 @@ class CodeGenx86(DepthFirstAdapter):
 			#ret = ret or isinstance(sym.decl(), MethodDecl) #FIXME - probably need this
 			ret = ret or (isinstance(sym.decl(), VarDecl) and sym.scope() == G.symTab().getScope())
 		return ret
-	
-	def beginScope(self, b=True):
-		self.valid_scope = b
-		G.symTab().beginScope()
-	
-	def endScope(self, b=True):
-		if self.valid_scope:
-			G.symTab().endScope()
-		self.valid_scope = b
-	
+
 	def printTypeMap(self):
 		for k in self.typeMap:
 			print k,':',self.typeMap[k]
-	
-	def defaultIn(self, node):
-		#print " in: " + node.getClass().getName()
-		#raise Exception("unimplemented in-node")
-		pass
-	
-	def defaultOut(self, node):
-		#print "out: " + node.getClass().getName()
-		#raise Exception("unimplemented out-node")
-		pass
-	
+
 	###########################################################################
 	## METHOD DECLARATION STUFF											  ##
 	###########################################################################
@@ -199,8 +192,8 @@ class CodeGenx86(DepthFirstAdapter):
 		   Types
 			* any type'''
 		self.printFunc(self.outAKlassVar)
-		nm = self.prefix() + node.getVar().getId().getText()
-		self.writeAsm('.comm\t' + nm + ',4,4')
+		nm = self.prefix() + node.getVar().getId().getText() #variable name
+		self.writeAsm('.comm\t' + nm + ',4,4') #global class variable
 
 	###########################################################################
 	## STATEMENT STUFF													   ##
@@ -208,8 +201,8 @@ class CodeGenx86(DepthFirstAdapter):
 	def inAAssignStmt(self, node):
 		'''Generate 'assignment statement' comments'''
 		self.printFunc(self.inAAssignStmt, node)
-		ln = node.getId().getLine()
-		src = node.toString().strip()
+		ln = node.getId().getLine()   #line number
+		src = node.toString().strip() #assignment stmt source code
 		self.writeAsmComment(src, ln)
 
 	def outAAssignStmt(self, node):
@@ -225,10 +218,10 @@ class CodeGenx86(DepthFirstAdapter):
 		'''Generate 'if-else' code'''
 		self.printFunc(self.caseAIfStmt, node)
 		
-		ln = node.getIf1().getLine()
-		src_expr = node.getExpr().toString().strip()
-		else_lbl = self.nextLabel()
-		end_lbl = self.nextLabel()
+		ln = node.getIf1().getLine() #if-else line number
+		src_expr = node.getExpr().toString().strip() #if-else source code
+		else_lbl = self.nextLabel() #unique label for else start
+		end_lbl = self.nextLabel()  #unique label for end of if-else
 
 		self.inAIfStmt(node)
 		if node.getIf1() != None:
@@ -236,6 +229,7 @@ class CodeGenx86(DepthFirstAdapter):
 		if node.getExpr() != None:
 			node.getExpr().apply(self)
 			self.writeAsmComment('if ' + src_expr, ln)
+			#check for boolean value in expression
 			self.writeAsm('popl %eax\n'
 						  'cmpl $0, %eax\n'
 						  'jz ' + else_lbl
@@ -246,52 +240,51 @@ class CodeGenx86(DepthFirstAdapter):
 			node.getCrPlus().apply(self)
 		if node.getStmtList() != None:
 			node.getStmtList().apply(self)
-			self.writeAsm('jmp ' + end_lbl +
-						  '\n' + else_lbl
-						  )
+			self.writeAsm('jmp ' + end_lbl) #jump to end of if-else
+			self.writeAsmLabel(else_lbl)    #else label
 		if node.getStmtElse() != None:
 			node.getStmtElse().apply(self)
 		if node.getKwEnd() != None:
 			node.getKwEnd().apply(self)
-			self.writeAsm(end_lbl)
+			self.writeAsmLabel(end_lbl) #end label
 		if node.getIf2() != None:
 			node.getIf2().apply(self)
 		self.outAIfStmt(node)
-	
-	def outAIfStmt(self, node):
-		'''Manage 'if' statement
-		   Error Conditions:
-			* expr type != Type.BOOLEAN'''
-		self.printFunc(self.outAIfStmt)
-
-	def outAStmtElse(self, node):
-		''''''
-		self.printFunc(self.outAStmtElse, node)
 
 	def caseALoopStmt(self, node):
-		''''''
+		'''Generate 'loop while' code'''
 		self.printFunc(self.caseALoopStmt, node)
+
+		ln = node.getLp1().getLine() #loop line number
+		src_expr = node.getExpr().toString().strip() #loop source code
+		start_lbl = self.nextLabel() #unique label for loop start
+		end_lbl = self.nextLabel()   #unique label for loop end
 
 		self.inALoopStmt(node)
 		if node.getLp1() != None:
 			node.getLp1().apply(self)
+			self.writeAsmComment('loop while ' + src_expr, ln)
+			self.writeAsmLabel(start_lbl) #start loop label
 		if node.getKwWhile() != None:
 			node.getKwWhile().apply(self)
 		if node.getExpr() != None:
 			node.getExpr().apply(self)
+			#check boolean value of expression
+			self.writeAsm('popl %eax\n'
+						  'cmpl $0, %eax\n'
+						  'jz ' + end_lbl
+						  )
 		if node.getCrPlus() != None:
 			node.getCrPlus().apply(self)
 		if node.getStmtList() != None:
 			node.getStmtList().apply(self)
 		if node.getKwEnd() != None:
 			node.getKwEnd().apply(self)
+			self.writeAsm('jmp ' + start_lbl) #repeat loop jump
+			self.writeAsmLabel(end_lbl)       #end loop label
 		if node.getLp2() != None:
 			node.getLp2().apply(self)
 		self.outALoopStmt(node)
-
-	def outALoopStmt(self, node):
-		''''''
-		self.printFunc(self.outALoopStmt)
 
 	def outACallStmt(self, node):
 		''''''
@@ -392,10 +385,6 @@ class CodeGenx86(DepthFirstAdapter):
 					  'pushl %eax'
 					  )
 
-	def outAOtherExpr8(self, node):
-		''''''
-		self.printFunc(self.outAOtherExpr8, node)
-
 	def outAMultExpr5(self, node):
 		'''Generate 'multiplication' code
 		   Types
@@ -417,10 +406,6 @@ class CodeGenx86(DepthFirstAdapter):
 					  'idiv %ecx\n'
 					  'pushl %eax')
 
-	def outAOtherExpr5(self, node):
-		''''''
-		self.printFunc(self.outAOtherExpr5, node)
-
 	def outAAddExpr4(self, node):
 		'''Generate 'addition' code
 		   Types
@@ -441,17 +426,9 @@ class CodeGenx86(DepthFirstAdapter):
 					  'subl %ebx, %eax\n'
 					  'pushl %eax')
 
-	def outAOtherExpr4(self, node):
-		''''''
-		self.printFunc(self.outAOtherExpr4, node)
-
 	def outAConcatExpr3(self, node):
 		''''''
 		self.printFunc(self.outAConcatExpr3, node)
-
-	def outAOtherExpr3(self, node):
-		''''''
-		self.printFunc(self.outAOtherExpr3, node)
 
 	def outALteExpr2(self, node):
 		'''Generate 'less than or equal' code
@@ -523,10 +500,6 @@ class CodeGenx86(DepthFirstAdapter):
 					  'movzxb %al, %eax\n'
 					  'pushl %eax'
 					  )
-
-	def outAOtherExpr2(self, node):
-		''''''
-		self.printFunc(self.outAOtherExpr2, node)
 	
 	def outAAndExpr1(self, node):
 		'''Generate 'and' code
@@ -537,12 +510,6 @@ class CodeGenx86(DepthFirstAdapter):
 					  'popl %eax\n'
 					  'and %ebx, %eax\n'
 					  'pushl %eax')
-
-	def outAOtherExpr1(self, node):
-		'''Manage 'other' expr1 expression
-		   Error Conditions
-			* NONE'''
-		self.printFunc(self.outAOtherExpr1, node)
 	
 	def outAOrExpr(self, node):
 		'''Generate 'or' code
@@ -553,12 +520,6 @@ class CodeGenx86(DepthFirstAdapter):
 					  'popl %eax\n'
 					  'or %ebx, %eax\n'
 					  'pushl %eax')
-
-	def outAOtherExpr(self, node):
-		'''Manage 'other' expr expression
-		   Error Conditions
-			* NONE'''
-		self.printFunc(self.outAOtherExpr, node)
 
 	def outAExprList(self, node):
 		'''Manage 'expr_list'

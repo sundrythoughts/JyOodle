@@ -41,6 +41,7 @@ class Options:
 		self.m_opts = dict() #{str:bool}
 		self.m_files = list() #[str]
 		self.m_opts['-ds'] = False
+		self.m_print_debug = False
 
 	def parseArgs(self, args):
 		'''Parse the command-line arguments.
@@ -58,6 +59,12 @@ class Options:
 	def displayTokens(self):
 		'''[Option = -ds] -> should tokens be displayed or not'''
 		return self.m_opts['-ds']
+
+	def printDebug(self):
+		return self.m_print_debug
+
+	def setPrintDebug(self, p=False):
+		self.m_print_debug = p
 	
 	@staticmethod
 	def options():

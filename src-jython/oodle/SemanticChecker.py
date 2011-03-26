@@ -46,7 +46,8 @@ class SemanticChecker(DepthFirstAdapter):
 	###########################################################################
 	def printFunc(self, f, node=None):
 		n = (': ' + node.toString().strip()) if node else ''
-		print 'SemanticChecker: ' + f.__name__ + n
+		if G.options().printDebug():
+			print 'SemanticChecker: ' + f.__name__ + n
 	
 	###########################################################################
 	## Methods to help with querying/modifying the SymbolTable               ##
@@ -457,7 +458,7 @@ class SemanticChecker(DepthFirstAdapter):
 		'''Manage 'false' expr9 expression
 		   Error Conditions
 		    * NONE'''
-		print 'outAFalseExpr9' + ': ' + node.toString().strip()
+		self.printFunc(self.outAFalseExpr9, node)
 		self.typeMap[node] = Type.BOOLEAN
 
 	def outANullExpr9(self, node):
