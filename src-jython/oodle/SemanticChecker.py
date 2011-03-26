@@ -105,15 +105,19 @@ class SemanticChecker(DepthFirstAdapter):
 	def inAMethodSig(self, node):
 		'''Check method signature
 		   Error Conditions:
-		    * Method already declared'''
+		    * Method already declared
+		    * HACK MiniOodle: any method besides start()'''
 		self.printFunc(self.inAMethodSig, node)
 		nm = node.getId().getText() #get the method name
+		ln = node.getId().getLine()
 		sym = G.symTab().lookup(nm)
 		if sym != None:
-			ln = node.getId().getLine()
 			G.errors().semantic().add("redeclared identifier '" + nm + "'", ln)
 			self.beginScope(False)
 		else:
+			#HACK: if method is something other than start()
+			if nm != 'start':
+				G.errors().semantic().addUnsupportedFeature('method must be named start()', ln)
 			G.symTab().push(nm, MethodDecl([], Type.VOID))   #add the (node id, type) to the SymbolTable
 			self.beginScope() #make new scope for local variables
 
@@ -236,13 +240,15 @@ class SemanticChecker(DepthFirstAdapter):
 		self.printFunc(self.outAStringType, node)
 		self.typeMap[node] = Type.STRING      #store this nodes type
 		ln = node.getKwString().getLine() #get the line number
-		G.errors().semantic().addUnsupportedFeature("'string'", ln)
+		G.errors().semantic().addUnsupportedFeature('string', ln)
 	
 	def outAUdtType(self, node):
 		self.printFunc(self.outAUdtType, node)
 		err = False
 		nm = node.getId().getText()
 		ln = node.getId().getLine()
+
+		G.errors().semantic().addUnsupportedFeature('user-defined type', ln)
 		
 		#invalid/undeclared type name
 		if G.symTab().lookup(nm) == None:
@@ -254,6 +260,9 @@ class SemanticChecker(DepthFirstAdapter):
 	
 	def outAArrayType(self, node):
 		self.printFunc(self.outAArrayType, node)
+		ln = node.getMiscLBrack().getLine()
+		G.errors().semantic().addUnsupportedFeature('array', ln)
+		self.typeMap[node] = Type.NONE
 
 	###########################################################################
 	## CLASS DECLARATION STUFF                                               ##
@@ -468,12 +477,39 @@ class SemanticChecker(DepthFirstAdapter):
 		self.printFunc(self.outANullExpr9, node)
 		self.typeMap[node] = Type.NULL
 
+	def outAMeExpr9(self, node):
+		'''Manage 'me' expr9 expression
+		   Error Conditions
+		    * HACK MiniOodle: me is unsupported'''
+		self.printFunc(self.outAMeExpr9, node)
+		ln = node.getKwMe().getLine()
+		G.errors().semantic().addUnsupportedFeature('me', ln)
+		self.typeMap[node] = Type.NONE
+
+	def outANewExpr9(self, node):
+		'''Manage 'new' expr9 expression
+		   Error Conditions
+		    * HACK MiniOodle: new is unsupported'''
+		self.printFunc(self.outANewExpr9, node)
+		ln = node.getKwNew().getLine()
+		G.errors().semantic().addUnsupportedFeature('new', ln)
+		self.typeMap[node] = Type.NONE
+
 	def outAParExpr9(self, node):
 		'''Manage parentheses expr9 expression
 		   Error Conditions
 		    * NONE'''
 		self.printFunc(self.outAParExpr9, node)
 		self.typeMap[node] = self.typeMap[node.getExpr()]
+
+	def outAArrayExpr9(self, node):
+		'''Manage 'array' expr9 expression
+		   Error Conditions
+		    * HACK MiniOodle: me is unsupported'''
+		self.printFunc(self.outAMeExpr9, node)
+		ln = node.getId().getLine()
+		G.errors().semantic().addUnsupportedFeature('array', ln)
+		self.typeMap[node] = Type.NONE
 
 	def outACallExpr9(self, node):
 		'''Manage 'call' expr9 expression

@@ -41,6 +41,8 @@ class CodeGenx86(DepthFirstAdapter):
 		self.hack_has_class = False #HACK for MiniOodle
 		self.valid_scope = False
 		self.asm_list = []          #list of asm instructions
+		self.asm_data_list = []     #list of asm instructions in the .data segment
+		self.asm_text_list = []     #list of asm instructions in the .text segment
 		self.label_counter = 0      #unique counter for label generation
 
 	def prefix(self):
@@ -48,13 +50,7 @@ class CodeGenx86(DepthFirstAdapter):
 		return '_'
 
 	def writeAsm(self, asm_str):
-		'''add asm to list
-		   also add tabs to output for prettier printing'''
-		self.asm_list.append('\t' + asm_str.replace('\n', '\n\t'))
-
-	def writeAsmLabel(self, lbl_str):
-		'''add asm labels to list'''
-		self.asm_list.append(lbl_str + ':')
+		self.asm_list += asm_str.split('\n')
 
 	def writeAsmComment(self, com_str, ln=None):
 		'''add asm comments and line number to list'''
@@ -63,9 +59,48 @@ class CodeGenx86(DepthFirstAdapter):
 			self.asm_list.append('#Line ' + str(ln) + ': ' + com_str)
 		else:
 			self.asm_list.append('# ' + com_str)
+
+	def writeAsmData(self, asm_str):
+		self.asm_data_list += asm_str.split('\n')
+
+	def writeAsmDataComment(self, com_str, ln=None):
+		'''add asm comments and line number to list'''
+		com_str = com_str.strip().replace('\n', '\n#')
+		if ln:
+			self.asm_data_list.append('#Line ' + str(ln) + ': ' + com_str)
+		else:
+			self.asm_data_list.append('# ' + com_str)
+
+	def writeAsmText(self, asm_str):
+		'''add asm to list
+		   also add tabs to output for prettier printing'''
+		self.asm_text_list += ('\t' + asm_str.replace('\n', '\n\t')).split('\n')
+
+	def writeAsmTextFunc(self, func_nm):
+		self.asm_text_list.append('.globl ' + func_nm)
+		self.asm_text_list.append('\t.type ' + func_nm + ', @function')
+		self.asm_text_list.append(func_nm + ':')
+
+	def writeAsmTextLabel(self, lbl_str):
+		'''add asm labels to list'''
+		self.asm_text_list.append(lbl_str + ':')
+
+	def writeAsmTextComment(self, com_str, ln=None):
+		'''add asm comments and line number to list'''
+		com_str = com_str.strip().replace('\n', '\n#')
+		if ln:
+			self.asm_text_list.append('#Line ' + str(ln) + ': ' + com_str)
+		else:
+			self.asm_text_list.append('# ' + com_str)
 	
 	def printAsm(self):
 		for l in self.asm_list:
+			print l
+		print '\t.data'
+		for l in self.asm_data_list:
+			print l
+		print '\t.text'
+		for l in self.asm_text_list:
 			print l
 
 	def nextLabel(self):
@@ -107,18 +142,29 @@ class CodeGenx86(DepthFirstAdapter):
 		for k in self.typeMap:
 			print k,':',self.typeMap[k]
 
+
+
+
 	###########################################################################
 	## METHOD DECLARATION STUFF											  ##
 	###########################################################################
-	def outAMethod(self, node):
-		self.printFunc(self.outAMethod)
-
 	def inAMethodSig(self, node):
 		''''''
 		self.printFunc(self.inAMethodSig, node)
+		
+		ln = node.getId().getLine()
+		src = node.toString().strip()
+		nm = node.getId().getText()
+		
+		self.writeAsmTextComment(src, ln)
+		self.writeAsmTextFunc(nm)
 
 	def outAMethodSig(self, node):
 		self.printFunc(self.outAMethodSig, node)
+
+	def outAMethod(self, node):
+		self.printFunc(self.outAMethod)
+		self.writeAsmText('ret')
 	
 	def outAArgList(self, node):
 		self.printFunc(self.outAArgList, node)
@@ -193,7 +239,7 @@ class CodeGenx86(DepthFirstAdapter):
 			* any type'''
 		self.printFunc(self.outAKlassVar)
 		nm = self.prefix() + node.getVar().getId().getText() #variable name
-		self.writeAsm('.comm\t' + nm + ',4,4') #global class variable
+		self.writeAsm('\t.comm\t' + nm + ',4,4') #global class variable
 
 	###########################################################################
 	## STATEMENT STUFF													   ##
@@ -203,7 +249,7 @@ class CodeGenx86(DepthFirstAdapter):
 		self.printFunc(self.inAAssignStmt, node)
 		ln = node.getId().getLine()   #line number
 		src = node.toString().strip() #assignment stmt source code
-		self.writeAsmComment(src, ln)
+		self.writeAsmTextComment(src, ln)
 
 	def outAAssignStmt(self, node):
 		'''Manage 'assignment' statement
@@ -212,7 +258,7 @@ class CodeGenx86(DepthFirstAdapter):
 			* lhs and rhs must have equal types'''
 		self.printFunc(self.outAAssignStmt, node)
 		nm = '_' + node.getId().getText()
-		self.writeAsm('popl ' + nm)
+		self.writeAsmText('popl ' + nm)
 
 	def caseAIfStmt(self, node):
 		'''Generate 'if-else' code'''
@@ -226,27 +272,27 @@ class CodeGenx86(DepthFirstAdapter):
 		self.inAIfStmt(node)
 		if node.getIf1() != None:
 			node.getIf1().apply(self)
+			self.writeAsmTextComment('if ' + src_expr, ln)
 		if node.getExpr() != None:
 			node.getExpr().apply(self)
-			self.writeAsmComment('if ' + src_expr, ln)
 			#check for boolean value in expression
-			self.writeAsm('popl %eax\n'
-						  'cmpl $0, %eax\n'
-						  'jz ' + else_lbl
-						  )
+			self.writeAsmText('popl %eax\n'
+						      'cmpl $0, %eax\n'
+						      'jz ' + else_lbl
+						      )
 		if node.getKwThen() != None:
 			node.getKwThen().apply(self)
 		if node.getCrPlus() != None:
 			node.getCrPlus().apply(self)
 		if node.getStmtList() != None:
 			node.getStmtList().apply(self)
-			self.writeAsm('jmp ' + end_lbl) #jump to end of if-else
-			self.writeAsmLabel(else_lbl)    #else label
+			self.writeAsmText('jmp ' + end_lbl) #jump to end of if-else
+			self.writeAsmTextLabel(else_lbl)    #else label
 		if node.getStmtElse() != None:
 			node.getStmtElse().apply(self)
 		if node.getKwEnd() != None:
 			node.getKwEnd().apply(self)
-			self.writeAsmLabel(end_lbl) #end label
+			self.writeAsmTextLabel(end_lbl) #end label
 		if node.getIf2() != None:
 			node.getIf2().apply(self)
 		self.outAIfStmt(node)
@@ -263,25 +309,25 @@ class CodeGenx86(DepthFirstAdapter):
 		self.inALoopStmt(node)
 		if node.getLp1() != None:
 			node.getLp1().apply(self)
-			self.writeAsmComment('loop while ' + src_expr, ln)
-			self.writeAsmLabel(start_lbl) #start loop label
+			self.writeAsmTextComment('loop while ' + src_expr, ln)
+			self.writeAsmTextLabel(start_lbl) #start loop label
 		if node.getKwWhile() != None:
 			node.getKwWhile().apply(self)
 		if node.getExpr() != None:
 			node.getExpr().apply(self)
 			#check boolean value of expression
-			self.writeAsm('popl %eax\n'
-						  'cmpl $0, %eax\n'
-						  'jz ' + end_lbl
-						  )
+			self.writeAsmText('popl %eax\n'
+						      'cmpl $0, %eax\n'
+						      'jz ' + end_lbl
+						      )
 		if node.getCrPlus() != None:
 			node.getCrPlus().apply(self)
 		if node.getStmtList() != None:
 			node.getStmtList().apply(self)
 		if node.getKwEnd() != None:
 			node.getKwEnd().apply(self)
-			self.writeAsm('jmp ' + start_lbl) #repeat loop jump
-			self.writeAsmLabel(end_lbl)       #end loop label
+			self.writeAsmText('jmp ' + start_lbl) #repeat loop jump
+			self.writeAsmTextLabel(end_lbl)       #end loop label
 		if node.getLp2() != None:
 			node.getLp2().apply(self)
 		self.outALoopStmt(node)
@@ -315,7 +361,7 @@ class CodeGenx86(DepthFirstAdapter):
 		    * a variable name'''
 		self.printFunc(self.outAIdExpr9, node)
 		nm = self.prefix() + node.getId().getText()
-		self.writeAsm('pushl ' + nm)
+		self.writeAsmText('pushl ' + nm)
 
 	def outAStrExpr9(self, node):
 		''''''
@@ -327,21 +373,21 @@ class CodeGenx86(DepthFirstAdapter):
 		    * Type.INT'''
 		self.printFunc(self.outAIntExpr9, node)
 		imm = '$' + node.getIntLit().getText()
-		self.writeAsm('pushl ' + imm)
+		self.writeAsmText('pushl ' + imm)
 
 	def outATrueExpr9(self, node):
 		'''Generate 'true' code
 		   Types
 		    * Type.BOOLEAN'''
 		self.printFunc(self.outATrueExpr9, node)
-		self.writeAsm('pushl $1')
+		self.writeAsmText('pushl $1')
 
 	def outAFalseExpr9(self, node):
 		'''Generate 'false' code
 		   Types
 		    * Type.BOOLEAN'''
 		self.printFunc(self.outAFalseExpr9, node)
-		self.writeAsm('pushl $0')
+		self.writeAsmText('pushl $0')
 
 	def outANullExpr9(self, node):
 		''''''
@@ -368,39 +414,39 @@ class CodeGenx86(DepthFirstAdapter):
 		   Types
 		    * operand == Type.INT'''
 		self.printFunc(self.outANegExpr8, node)
-		self.writeAsm('popl %eax\n'
-					  'neg %eax\n'
-					  'pushl %eax'
-					  )
+		self.writeAsmText('popl %eax\n'
+					      'neg %eax\n'
+					      'pushl %eax'
+					      )
 
 	def outANotExpr8(self, node):
 		'''Generate 'not' code
 		   Types
 		    * operand == Type.BOOLEAN'''
 		self.printFunc(self.outANotExpr8, node)
-		self.writeAsm('popl %eax\n'
-					  'testl %eax, %eax\n'
-					  'sete %al\n'
-					  'movzxb %al, %eax\n'
-					  'pushl %eax'
-					  )
+		self.writeAsmText('popl %eax\n'
+					      'testl %eax, %eax\n'
+					      'sete %al\n'
+					      'movzxb %al, %eax\n'
+					      'pushl %eax'
+					      )
 
 	def outAMultExpr5(self, node):
 		'''Generate 'multiplication' code
 		   Types
 		    * lhs && rhs == Type.INT'''
 		self.printFunc(self.outAMultExpr5, node)
-		self.writeAsm('popl %ebx\n'
-					  'popl %eax\n'
-					  'imul %ebx, %eax\n'
-					  'pushl %eax')
+		self.writeAsmText('popl %ebx\n'
+					      'popl %eax\n'
+					      'imul %ebx, %eax\n'
+					      'pushl %eax')
 
 	def outADivExpr5(self, node):
 		'''Generate 'division' code
 		   Types
 		    * lhs && rhs == Type.INT'''
 		self.printFunc(self.outAMultExpr5, node)
-		self.writeAsm('popl %ecx\n'
+		self.writeAsmText('popl %ecx\n'
 					  'popl %eax\n'
 					  'cdq\n'
 					  'idiv %ecx\n'
@@ -411,7 +457,7 @@ class CodeGenx86(DepthFirstAdapter):
 		   Types
 		    * lhs && rhs == Type.INT'''
 		self.printFunc(self.outAAddExpr4, node)
-		self.writeAsm('popl %ebx\n'
+		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'addl %ebx, %eax\n'
 					  'pushl %eax')
@@ -421,7 +467,7 @@ class CodeGenx86(DepthFirstAdapter):
 		   Types
 		    * lhs && rhs == Type.INT'''
 		self.printFunc(self.outASubExpr4, node)
-		self.writeAsm('popl %ebx\n'
+		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'subl %ebx, %eax\n'
 					  'pushl %eax')
@@ -436,10 +482,10 @@ class CodeGenx86(DepthFirstAdapter):
 			* lhs && rhs == Type.INT
 			* lhs && rhs == Type.String'''
 		self.printFunc(self.outALteExpr2)
-		self.writeAsm('popl %ebx\n'
+		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'cmpl %ebx, %eax\n'
-					  'setbeb %al\n'
+					  'setleb %al\n'
 					  'movzxb %al, %eax\n'
 					  'pushl %eax'
 					  )
@@ -450,10 +496,10 @@ class CodeGenx86(DepthFirstAdapter):
 			* lhs && rhs == Type.INT
 			* lhs && rhs == Type.String'''
 		self.printFunc(self.outAGteExpr2, node)
-		self.writeAsm('popl %ebx\n'
+		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'cmpl %ebx, %eax\n'
-					  'setaeb %al\n'
+					  'setgeb %al\n'
 					  'movzxb %al, %eax\n'
 					  'pushl %eax'
 					  )
@@ -464,10 +510,10 @@ class CodeGenx86(DepthFirstAdapter):
 			* lhs && rhs == Type.INT
 			* lhs && rhs == Type.STRING'''
 		self.printFunc(self.outALtExpr2, node)
-		self.writeAsm('popl %ebx\n'
+		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'cmpl %ebx, %eax\n'
-					  'setbb %al\n'
+					  'setlb %al\n'
 					  'movzxb %al, %eax\n'
 					  'pushl %eax'
 					  )
@@ -478,10 +524,10 @@ class CodeGenx86(DepthFirstAdapter):
 			* lhs && rhs == Type.INT
 			* lhs && rhs == Type.STRING'''
 		self.printFunc(self.outAGtExpr2, node)
-		self.writeAsm('popl %ebx\n'
+		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'cmpl %ebx, %eax\n'
-					  'setab %al\n'
+					  'setgb %al\n'
 					  'movzxb %al, %eax\n'
 					  'pushl %eax'
 					  )
@@ -493,7 +539,7 @@ class CodeGenx86(DepthFirstAdapter):
 			* lhs && rhs == Type.STRING
 			* lhs && rhs == Type.BOOLEAN'''
 		self.printFunc(self.outAEqExpr2, node)
-		self.writeAsm('popl %ebx\n'
+		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'cmpl %ebx, %eax\n'
 					  'seteb %al\n'
@@ -506,7 +552,7 @@ class CodeGenx86(DepthFirstAdapter):
 		   Types
 			* lhs && rhs == Type.BOOLEAN'''
 		self.printFunc(self.outAAndExpr1, node)
-		self.writeAsm('popl %ebx\n'
+		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'and %ebx, %eax\n'
 					  'pushl %eax')
@@ -516,7 +562,7 @@ class CodeGenx86(DepthFirstAdapter):
 		   Types
 			* lhs && rhs == Type.BOOLEAN'''
 		self.printFunc(self.outAAndExpr1, node)
-		self.writeAsm('popl %ebx\n'
+		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'or %ebx, %eax\n'
 					  'pushl %eax')
@@ -541,4 +587,9 @@ class CodeGenx86(DepthFirstAdapter):
 			* wrong parameter types'''
 		self.printFunc(self.outACall, node)
 	
-	
+	def inStart(self, node):
+		self.printFunc(self.inStart)
+		self.writeAsmTextFunc('main')
+		self.writeAsmText('call start\n'
+						  'ret'
+						  )
