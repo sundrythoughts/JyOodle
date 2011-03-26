@@ -41,6 +41,7 @@ class CodeGenx86(DepthFirstAdapter):
 		self.hack_has_class = False #HACK for MiniOodle
 		self.valid_scope = False
 		self.asm_list = []
+		self.label_counter = 0
 
 	def prefix(self):
 		return '_'
@@ -55,6 +56,10 @@ class CodeGenx86(DepthFirstAdapter):
 	def printAsm(self):
 		for l in self.asm_list:
 			print l
+
+	def nextLabel(self):
+		self.label_counter += 1
+		return '.L' + str(self.label_counter)
 	
 	###########################################################################
 	## Methods to help with debugging										 ##
@@ -215,6 +220,43 @@ class CodeGenx86(DepthFirstAdapter):
 		self.printFunc(self.outAAssignStmt, node)
 		nm = '_' + node.getId().getText()
 		self.writeAsm('popl ' + nm)
+
+	def caseAIfStmt(self, node):
+		'''Generate 'if-else' code'''
+		self.printFunc(self.caseAIfStmt, node)
+		
+		ln = node.getIf1().getLine()
+		src_expr = node.getExpr().toString().strip()
+		else_lbl = self.nextLabel()
+		end_lbl = self.nextLabel()
+
+		self.inAIfStmt(node)
+		if node.getIf1() != None:
+			node.getIf1().apply(self)
+		if node.getExpr() != None:
+			node.getExpr().apply(self)
+			self.writeAsmComment('if ' + src_expr, ln)
+			self.writeAsm('popl %eax\n'
+						  'cmpl $0, %eax\n'
+						  'jz ' + else_lbl
+						  )
+		if node.getKwThen() != None:
+			node.getKwThen().apply(self)
+		if node.getCrPlus() != None:
+			node.getCrPlus().apply(self)
+		if node.getStmtList() != None:
+			node.getStmtList().apply(self)
+			self.writeAsm('jmp ' + end_lbl +
+						  '\n' + else_lbl
+						  )
+		if node.getStmtElse() != None:
+			node.getStmtElse().apply(self)
+		if node.getKwEnd() != None:
+			node.getKwEnd().apply(self)
+			self.writeAsm(end_lbl)
+		if node.getIf2() != None:
+			node.getIf2().apply(self)
+		self.outAIfStmt(node)
 	
 	def outAIfStmt(self, node):
 		'''Manage 'if' statement
@@ -225,6 +267,27 @@ class CodeGenx86(DepthFirstAdapter):
 	def outAStmtElse(self, node):
 		''''''
 		self.printFunc(self.outAStmtElse, node)
+
+	def caseALoopStmt(self, node):
+		''''''
+		self.printFunc(self.caseALoopStmt, node)
+
+		self.inALoopStmt(node)
+		if node.getLp1() != None:
+			node.getLp1().apply(self)
+		if node.getKwWhile() != None:
+			node.getKwWhile().apply(self)
+		if node.getExpr() != None:
+			node.getExpr().apply(self)
+		if node.getCrPlus() != None:
+			node.getCrPlus().apply(self)
+		if node.getStmtList() != None:
+			node.getStmtList().apply(self)
+		if node.getKwEnd() != None:
+			node.getKwEnd().apply(self)
+		if node.getLp2() != None:
+			node.getLp2().apply(self)
+		self.outALoopStmt(node)
 
 	def outALoopStmt(self, node):
 		''''''

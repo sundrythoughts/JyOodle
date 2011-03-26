@@ -10,5 +10,19 @@ class Main is
 		b := true or false = true
 		b := not(10 = 5)
 		x := -(10)
+
+		if x < 0 then
+			x := 1
+		else
+			if x = 0 then
+				x := 0
+			else
+				x := -1
+			end if
+		end if
+		
+		loop while x > 0
+			x := x - 1
+		end loop
 	end start
 end Main
