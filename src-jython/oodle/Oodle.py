@@ -39,10 +39,7 @@ from java.io import *
 import sys
 
 class Oodle:
-	'''Main class for the Oodle compiler
-	   Takes command-line arguments and turns them into an Option class.
-	   Then, it passes each file separately to the Lexer which may print
-	   out the tokens. It ends each file when each reaches EOF.'''
+	'''Main class for the Oodle compiler.'''
 
 	def __init__(self):
 		pass
@@ -51,7 +48,7 @@ def main():
 	if len(sys.argv) < 2:
 		print "usage:"
 		print "  java Oodle filename"
-		sys.exit(-1)
+		return
 
 	#FIXME - HUGE HACK for readint/writeint
 	G.symTab().push('readint', oodle.Declarations.MethodDecl([oodle.Type.VOID], oodle.Type.INT))
@@ -64,7 +61,9 @@ def main():
 		flist.appendFile(f)
 
 	st_node = None
+	print 'Lexing...'
 	lex = Lexer(flist.getConcatFile().getAbsolutePath())
+	print 'Parsing...'
 	par = Parser(lex)
 	try:
 		st_node = par.parse()
@@ -75,23 +74,25 @@ def main():
 	
 	if G.errors().hasErrors():
 		G.errors().printErrors()
-		sys.exit(-1)
+		return
 
 	#perform semantic checks (new code)
+	print 'Error Checking...'
 	sem_check = SemanticChecker()
 	st_node.apply(sem_check)  #invoke SemanticChecker traversal
 
 	if G.errors().hasErrors():
 		G.symTab().printTable()
 		G.errors().printErrors()
-		sys.exit(-1)
+		return
 	
 	if G.options().generateAssembly():
+		print 'Compiling...'
 		code_gen = CodeGenx86()
 		st_node.apply(code_gen)
-		code_gen.printAsm()
 		code_gen.buildBinary()
-
+	
+	print 'DONE'
 
 if __name__ == "__main__":
 	main()

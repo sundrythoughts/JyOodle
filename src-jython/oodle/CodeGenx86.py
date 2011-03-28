@@ -31,6 +31,7 @@ from cps450.oodle.node import Node
 from oodle.G import G
 from oodle.Declarations import *
 from oodle import Type
+import subprocess
 
 class CodeGenx86(DepthFirstAdapter):
 	''''''
@@ -103,10 +104,38 @@ class CodeGenx86(DepthFirstAdapter):
 		for l in self.asm_text_list:
 			print l
 
-	def buildBinary(self, nm='a.out'):
-		#proc = subprocess.Popen(['gcc', '-m32', '-S', 'stdlib.c'])
-		#proc.wait()
-		pass
+	def buildBinary(self, nm=None):
+		#make new asm file with .s extension
+		fn = G.options().getFileList()[-1]
+		fn = fn[:fn.rfind('.ood')]
+		asm_fn = fn + '.s'
+		bin_fn = fn
+		f = file(asm_fn, 'w')
+
+		
+		
+		#write asm to file
+		for l in self.asm_list:
+			f.write(l)
+			f.write('\n')
+		f.write('\t.data\n')
+		for l in self.asm_data_list:
+			f.write(l)
+			f.write('\n')
+		f.write('\t.text\n')
+		for l in self.asm_text_list:
+			f.write(l)
+			f.write('\n')
+		f.flush()
+		
+		#compile asm with stdlib.c
+		proc = subprocess.Popen(['gcc', '-m32', '-o', bin_fn, 'stdlib.c', asm_fn])
+		proc.wait()
+		if proc.stderr:
+			print '------------------'
+			print 'GCC Error Output:'
+			print '------------------'
+			print proc.stderr
 
 	def nextLabel(self):
 		self.label_counter += 1
@@ -338,7 +367,8 @@ class CodeGenx86(DepthFirstAdapter):
 		self.outALoopStmt(node)
 
 	def outACallStmt(self, node):
-		''''''
+		'''Generate 'call stmt' code
+		   This node is always used for calls that do not have return values'''
 		self.printFunc(self.outACallStmt, node)
 
 	###########################################################################
@@ -403,8 +433,10 @@ class CodeGenx86(DepthFirstAdapter):
 		self.printFunc(self.outAParExpr9, node)
 
 	def outACallExpr9(self, node):
-		''''''
+		'''Generate 'call expr9' code
+		   This node is always used for calls that return a value'''
 		self.printFunc(self.outACallExpr9, node)
+		self.writeAsmText('pushl %eax')
 
 	def outAPosExpr8(self, node):
 		'''Generate 'positive' code
@@ -611,7 +643,7 @@ class CodeGenx86(DepthFirstAdapter):
 		nm = node.getId().getText()
 		sym = G.symTab().lookup(nm)
 		decl = sym.decl()
-		self.writeAsmTextComment(nm, ln)
+		self.writeAsmTextComment(src, ln)
 		self.writeAsmText('call ' + nm)
 		
 		#FIXME - HACK FOR REMOVING/NOT REMOVING PARAMETERS
@@ -619,8 +651,10 @@ class CodeGenx86(DepthFirstAdapter):
 			pass 
 		else: 
 			self.writeAsmText('addl $' + str(len(decl.argTypes()) * 4 ) + ', %esp')
-		if decl.retType() != Type.VOID:
-			self.writeAsmText('pushl %eax')
+		
+		#FIXME - I don't think these 2 lines are needed
+		#if decl.retType() != Type.VOID:
+		#	self.writeAsmText('pushl %eax')
 	
 	def inStart(self, node):
 		self.printFunc(self.inStart)
