@@ -103,6 +103,11 @@ class CodeGenx86(DepthFirstAdapter):
 		for l in self.asm_text_list:
 			print l
 
+	def buildBinary(self, nm='a.out'):
+		#proc = subprocess.Popen(['gcc', '-m32', '-S', 'stdlib.c'])
+		#proc.wait()
+		pass
+
 	def nextLabel(self):
 		self.label_counter += 1
 		return '.L' + str(self.label_counter)
@@ -578,6 +583,21 @@ class CodeGenx86(DepthFirstAdapter):
 	###########################################################################
 	## MISCELLANEOUS STUFF												   ##
 	###########################################################################
+	def caseACall(self, node):
+		self.inACall(node)
+		#FIXME - huge hack for MiniOodle readint/writeint
+		#if node.getObjExpr() != None:
+		#	node.getObjExpr().apply(self)
+		if node.getId() != None:
+			node.getId().apply(self)
+		if node.getMiscLParen() != None:
+			node.getMiscLParen().apply(self)
+		if node.getExprList() != None:
+			node.getExprList().apply(self)
+		if node.getMiscRParen() != None:
+			node.getMiscRParen().apply(self)
+		self.outACall(node);
+
 	def outACall(self, node):
 		'''Manage a method 'call'
 		   Error Conditions
@@ -586,6 +606,21 @@ class CodeGenx86(DepthFirstAdapter):
 			* wrong number of parameters
 			* wrong parameter types'''
 		self.printFunc(self.outACall, node)
+		src = node.toString().strip()
+		ln = node.getId().getLine()
+		nm = node.getId().getText()
+		sym = G.symTab().lookup(nm)
+		decl = sym.decl()
+		self.writeAsmTextComment(nm, ln)
+		self.writeAsmText('call ' + nm)
+		
+		#FIXME - HACK FOR REMOVING/NOT REMOVING PARAMETERS
+		if len(decl.argTypes()) == 1 and decl.argTypes()[0] == Type.VOID:
+			pass 
+		else: 
+			self.writeAsmText('addl $' + str(len(decl.argTypes()) * 4 ) + ', %esp')
+		if decl.retType() != Type.VOID:
+			self.writeAsmText('pushl %eax')
 	
 	def inStart(self, node):
 		self.printFunc(self.inStart)

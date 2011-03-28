@@ -425,15 +425,20 @@ class SemanticChecker(DepthFirstAdapter):
 	def outAIdExpr9(self, node):
 		'''Manage 'id' expr9 expression
 		   Error Conditions
-		    * Undefined id'''
+		    * Undefined id
+		    * HACK MiniOodle 'out' and 'in' are allowed'''
 		self.printFunc(self.outAIdExpr9, node)
 		nm = node.getId().getText()
 		sym = G.symTab().lookup(nm)
 		ln = node.getId().getLine()
 		
 		tp = Type.NONE
+		if nm == 'out':
+			pass
+		elif nm == 'in':
+			pass
 		#id is undefined
-		if sym == None:
+		elif sym == None:
 			G.errors().semantic().add("undefined variable '" + nm + "'", ln)
 		else:
 			tp = sym.decl().varType()
@@ -874,6 +879,9 @@ class SemanticChecker(DepthFirstAdapter):
 	###########################################################################
 	## MISCELLANEOUS STUFF                                                   ##
 	###########################################################################
+	def outAObjExpr(self, node):
+		self.printFunc(self.outAObjExpr, node)
+	
 	def outACall(self, node):
 		'''Manage a method 'call'
 		   Error Conditions
@@ -888,7 +896,7 @@ class SemanticChecker(DepthFirstAdapter):
 		ls_args = []
 		if node.getExprList() != None:
 			ls_args = self.typeMap[node.getExprList()]
-		
+
 		tp_ret = Type.NONE
 		#id does not exist or is not a method id
 		if sym == None or not isinstance(sym.decl(), MethodDecl):

@@ -8,5 +8,6 @@
 <path>/jyoodle/src</path>
 <path>/jyoodle/gen-src</path>
 <path>/jyoodle/bin</path>
+<path>/jyoodle/lib/jython.jar</path>
 </pydev_pathproperty>
 </pydev_project>

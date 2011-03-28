@@ -26,14 +26,15 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #===============================================================================
 
+from cps450.oodle.parser import Parser
 from oodle.G import G
 from oodle.Lexer import Lexer
-from cps450.oodle.parser import Parser
 from cps450.oodle.lexer import LexerException
 from cps450.oodle.node import *
 from cps450.oodle.parser import ParserException
 from oodle.SemanticChecker import SemanticChecker
 from oodle.CodeGenx86 import CodeGenx86
+import oodle
 from java.io import *
 import sys
 
@@ -51,6 +52,10 @@ def main():
 		print "usage:"
 		print "  java Oodle filename"
 		sys.exit(-1)
+
+	#FIXME - HUGE HACK for readint/writeint
+	G.symTab().push('readint', oodle.Declarations.MethodDecl([oodle.Type.VOID], oodle.Type.INT))
+	G.symTab().push('writeint', oodle.Declarations.MethodDecl([oodle.Type.INT], oodle.Type.VOID))
 
 	G.options().parseArgs(sys.argv[1:])
 
@@ -85,6 +90,8 @@ def main():
 		code_gen = CodeGenx86()
 		st_node.apply(code_gen)
 		code_gen.printAsm()
+		code_gen.buildBinary()
+
 
 if __name__ == "__main__":
 	main()
