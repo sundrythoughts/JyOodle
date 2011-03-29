@@ -85,12 +85,11 @@ def main():
 		G.symTab().printTable()
 		G.errors().printErrors()
 		return
-	
-	if G.options().generateAssembly():
-		print 'Compiling...'
-		code_gen = CodeGenx86()
-		st_node.apply(code_gen)
-		code_gen.buildBinary()
+
+	print 'Compiling...'
+	code_gen = CodeGenx86()
+	st_node.apply(code_gen)
+	code_gen.buildBinary(G.options().generateAssembly())
 	
 	print 'DONE'
 

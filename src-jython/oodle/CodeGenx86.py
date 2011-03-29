@@ -31,6 +31,7 @@ from cps450.oodle.node import Node
 from oodle.G import G
 from oodle.Declarations import *
 from oodle import Type
+import os
 import subprocess
 
 class CodeGenx86(DepthFirstAdapter):
@@ -104,7 +105,7 @@ class CodeGenx86(DepthFirstAdapter):
 		for l in self.asm_text_list:
 			print l
 
-	def buildBinary(self, nm=None):
+	def buildBinary(self, sopt=False):
 		#make new asm file with .s extension
 		fn = G.options().getFileList()[-1]
 		fn = fn[:fn.rfind('.ood')]
@@ -136,6 +137,9 @@ class CodeGenx86(DepthFirstAdapter):
 			print 'GCC Error Output:'
 			print '------------------'
 			print proc.stderr
+
+		if not sopt:
+			os.remove(asm_fn)
 
 	def nextLabel(self):
 		self.label_counter += 1
