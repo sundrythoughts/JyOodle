@@ -35,13 +35,10 @@ import os
 import subprocess
 
 class CodeGenx86(DepthFirstAdapter):
-	''''''
+	'''Generate x86 32-bit assembly code and binaries using GCC'''
 	def __init__(self):
 		DepthFirstAdapter.__init__(self)
-		self.typeMap = dict()       #dict<Node,Type>
 		
-		self.hack_has_class = False #HACK for MiniOodle
-		self.valid_scope = False
 		self.asm_list = []          #list of asm instructions
 		self.asm_data_list = []     #list of asm instructions in the .data segment
 		self.asm_text_list = []     #list of asm instructions in the .text segment
@@ -52,10 +49,11 @@ class CodeGenx86(DepthFirstAdapter):
 		return '_'
 
 	def writeAsm(self, asm_str):
+		'''add general asm to list'''
 		self.asm_list += asm_str.split('\n')
 
 	def writeAsmComment(self, com_str, ln=None):
-		'''add asm comments and line number to list'''
+		'''add general asm comments and line number to list'''
 		com_str = com_str.strip().replace('\n', '\n#')
 		if ln:
 			self.asm_list.append('#Line ' + str(ln) + ': ' + com_str)
@@ -63,10 +61,11 @@ class CodeGenx86(DepthFirstAdapter):
 			self.asm_list.append('# ' + com_str)
 
 	def writeAsmData(self, asm_str):
+		'''add .data segment asm to list'''
 		self.asm_data_list += asm_str.split('\n')
 
 	def writeAsmDataComment(self, com_str, ln=None):
-		'''add asm comments and line number to list'''
+		'''add .data segment asm comments and line number to list'''
 		com_str = com_str.strip().replace('\n', '\n#')
 		if ln:
 			self.asm_data_list.append('#Line ' + str(ln) + ': ' + com_str)
@@ -74,21 +73,22 @@ class CodeGenx86(DepthFirstAdapter):
 			self.asm_data_list.append('# ' + com_str)
 
 	def writeAsmText(self, asm_str):
-		'''add asm to list
+		'''add .text segment asm to list
 		   also add tabs to output for prettier printing'''
 		self.asm_text_list += ('\t' + asm_str.replace('\n', '\n\t')).split('\n')
 
 	def writeAsmTextFunc(self, func_nm):
+		'''add .text segment asm function to list'''
 		self.asm_text_list.append('.globl ' + func_nm)
 		self.asm_text_list.append('\t.type ' + func_nm + ', @function')
 		self.asm_text_list.append(func_nm + ':')
 
 	def writeAsmTextLabel(self, lbl_str):
-		'''add asm labels to list'''
+		'''add .text segment asm labels to list'''
 		self.asm_text_list.append(lbl_str + ':')
 
 	def writeAsmTextComment(self, com_str, ln=None):
-		'''add asm comments and line number to list'''
+		'''add .text segment asm comments and line number to list'''
 		com_str = com_str.strip().replace('\n', '\n#')
 		if ln:
 			self.asm_text_list.append('#Line ' + str(ln) + ': ' + com_str)
@@ -96,6 +96,7 @@ class CodeGenx86(DepthFirstAdapter):
 			self.asm_text_list.append('# ' + com_str)
 	
 	def printAsm(self):
+		'''print all asm to stdout'''
 		for l in self.asm_list:
 			print l
 		print '\t.data'
@@ -106,6 +107,8 @@ class CodeGenx86(DepthFirstAdapter):
 			print l
 
 	def buildBinary(self, sopt=False):
+		'''generate the binary using GCC
+		   if -S option is given, the generates a *.s assembly file instead'''
 		#make new asm file with .s extension
 		fn = G.options().getFileList()[-1]
 		fn = fn[:fn.rfind('.ood')]
@@ -142,6 +145,7 @@ class CodeGenx86(DepthFirstAdapter):
 			os.remove(asm_fn)
 
 	def nextLabel(self):
+		'''generate a unique label'''
 		self.label_counter += 1
 		return '.L' + str(self.label_counter)
 	
@@ -149,6 +153,8 @@ class CodeGenx86(DepthFirstAdapter):
 	## Methods to help with debugging										 ##
 	###########################################################################
 	def printFunc(self, f, node=None):
+		'''print the name of the node function and its node string
+		   only works if 'printDebug()' is enabled'''
 		n = (': ' + node.toString().strip()) if node else ''
 		if G.options().printDebug():
 			print 'CodeGenx86: ' + f.__name__ + n
@@ -176,13 +182,6 @@ class CodeGenx86(DepthFirstAdapter):
 			ret = ret or (isinstance(sym.decl(), VarDecl) and sym.scope() == G.symTab().getScope())
 		return ret
 
-	def printTypeMap(self):
-		for k in self.typeMap:
-			print k,':',self.typeMap[k]
-
-
-
-
 	###########################################################################
 	## METHOD DECLARATION STUFF											  ##
 	###########################################################################
@@ -198,19 +197,24 @@ class CodeGenx86(DepthFirstAdapter):
 		self.writeAsmTextFunc(nm)
 
 	def outAMethodSig(self, node):
+		''''''
 		self.printFunc(self.outAMethodSig, node)
 
 	def outAMethod(self, node):
+		''''''
 		self.printFunc(self.outAMethod)
 		self.writeAsmText('ret')
 	
 	def outAArgList(self, node):
+		''''''
 		self.printFunc(self.outAArgList, node)
 	
 	def outAArgListTail(self, node):
+		''''''
 		self.printFunc(self.outAArgListTail, node)
 	
 	def outAArg(self, node):
+		''''''
 		self.printFunc(self.outAArg, node)
 	
 	def outAMethodVar(self, node):
@@ -222,6 +226,7 @@ class CodeGenx86(DepthFirstAdapter):
 	## GENERIC VARIABLE DECLARATION STUFF (also includes method return type) ##
 	###########################################################################	
 	def outAVar(self, node):
+		''''''
 		self.printFunc(self.outAVar, node)
 	
 	def outAVarAssign(self, node):
@@ -229,12 +234,15 @@ class CodeGenx86(DepthFirstAdapter):
 		self.printFunc(self.outAVarAssign, node)
 
 	def outAVarType(self, node):
+		''''''
 		self.printFunc(self.outAVarType, node)
 
 	def outABoolType(self, node):
+		''''''
 		self.printFunc(self.outABoolType, node)
 	
 	def outAIntType(self, node):
+		''''''
 		self.printFunc(self.outAIntType, node)
 		
 	def outAStringType(self, node):
@@ -242,18 +250,18 @@ class CodeGenx86(DepthFirstAdapter):
 		self.printFunc(self.outAStringType, node)
 	
 	def outAUdtType(self, node):
+		'''Unsupported Feature for MiniOodle'''
 		self.printFunc(self.outAUdtType, node)
 	
 	def outAArrayType(self, node):
+		'''Unsupported Feature for MiniOodle'''
 		self.printFunc(self.outAArrayType, node)
 
 	###########################################################################
 	## CLASS DECLARATION STUFF											   ##
 	###########################################################################
 	def outAKlass(self, node):
-		'''Manage class declaration
-		   Error Conditions:
-			* Mismatched class header and footer names'''
+		''''''
 		self.printFunc(self.outAKlass)
 	
 	def inAKlassHeader(self, node):
@@ -290,10 +298,9 @@ class CodeGenx86(DepthFirstAdapter):
 		self.writeAsmTextComment(src, ln)
 
 	def outAAssignStmt(self, node):
-		'''Manage 'assignment' statement
+		'''Generate 'assignment' statement code
 		   Error Conditions:
-			* rhs id must exist and be a VarDecl or (return type) MethodDecl
-			* lhs and rhs must have equal types'''
+			* NONE'''
 		self.printFunc(self.outAAssignStmt, node)
 		nm = '_' + node.getId().getText()
 		self.writeAsmText('popl ' + nm)
@@ -378,21 +385,6 @@ class CodeGenx86(DepthFirstAdapter):
 	###########################################################################
 	## EXPRESSION STUFF													  ##
 	###########################################################################
-	def readBinExpr(self, node):
-		''''''
-		lhs = node.getE1()
-		rhs = node.getE2()
-		tp_lhs = self.typeMap[lhs]
-		tp_rhs = self.typeMap[rhs]
-		return (lhs, rhs, tp_lhs, tp_rhs)
-	
-	def checkBinExprTypes(self, node, tp_ls):
-		''''''
-		(lhs, rhs, tp_lhs, tp_rhs) = self.readBinExpr(node)
-		for t in tp_ls:
-			if tp_lhs == t and tp_rhs == t:
-				return tp_lhs
-		return Type.NONE
 	
 	def outAIdExpr9(self, node):
 		'''Generate 'id' code
@@ -521,7 +513,7 @@ class CodeGenx86(DepthFirstAdapter):
 		'''Generate 'less than or equal' code
 		   Types
 			* lhs && rhs == Type.INT
-			* lhs && rhs == Type.String'''
+			* FIXME - lhs && rhs == Type.String'''
 		self.printFunc(self.outALteExpr2)
 		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
@@ -535,7 +527,7 @@ class CodeGenx86(DepthFirstAdapter):
 		'''Generate 'greater than or equal' code
 		   Types
 			* lhs && rhs == Type.INT
-			* lhs && rhs == Type.String'''
+			* FIXME - lhs && rhs == Type.String'''
 		self.printFunc(self.outAGteExpr2, node)
 		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
@@ -549,7 +541,7 @@ class CodeGenx86(DepthFirstAdapter):
 		'''Generate 'less than' code
 		   Types
 			* lhs && rhs == Type.INT
-			* lhs && rhs == Type.STRING'''
+			* FIXME - lhs && rhs == Type.STRING'''
 		self.printFunc(self.outALtExpr2, node)
 		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
@@ -563,7 +555,7 @@ class CodeGenx86(DepthFirstAdapter):
 		'''Generate 'greater than' code
 		   Types
 			* lhs && rhs == Type.INT
-			* lhs && rhs == Type.STRING'''
+			* FIXME - lhs && rhs == Type.STRING'''
 		self.printFunc(self.outAGtExpr2, node)
 		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
@@ -577,7 +569,7 @@ class CodeGenx86(DepthFirstAdapter):
 		'''Generate 'less than' code
 		   Types
 			* lhs && rhs == Type.INT
-			* lhs && rhs == Type.STRING
+			* FIXME - lhs && rhs == Type.STRING
 			* lhs && rhs == Type.BOOLEAN'''
 		self.printFunc(self.outAEqExpr2, node)
 		self.writeAsmText('popl %ebx\n'
@@ -609,17 +601,14 @@ class CodeGenx86(DepthFirstAdapter):
 					  'pushl %eax')
 
 	def outAExprList(self, node):
-		'''Manage 'expr_list'
-		   Error Conditions
-			* NONE
-		   Special Features
-			* puts the entire list into the typeMap'''
+		''''''
 		self.printFunc(self.outAExprList, node)
 
 	###########################################################################
 	## MISCELLANEOUS STUFF												   ##
 	###########################################################################
 	def caseACall(self, node):
+		'''FIXME - huge hack for MiniOodle readint/writeint'''
 		self.inACall(node)
 		#FIXME - huge hack for MiniOodle readint/writeint
 		#if node.getObjExpr() != None:
@@ -635,12 +624,9 @@ class CodeGenx86(DepthFirstAdapter):
 		self.outACall(node);
 
 	def outACall(self, node):
-		'''Manage a method 'call'
+		'''Generate method 'call' code
 		   Error Conditions
-			* object does not contain method id
-			* method id does not exist in 'me'
-			* wrong number of parameters
-			* wrong parameter types'''
+			* NONE'''
 		self.printFunc(self.outACall, node)
 		src = node.toString().strip()
 		ln = node.getId().getLine()
@@ -655,12 +641,9 @@ class CodeGenx86(DepthFirstAdapter):
 			pass 
 		else: 
 			self.writeAsmText('addl $' + str(len(decl.argTypes()) * 4 ) + ', %esp')
-		
-		#FIXME - I don't think these 2 lines are needed
-		#if decl.retType() != Type.VOID:
-		#	self.writeAsmText('pushl %eax')
-	
+
 	def inStart(self, node):
+		''''''
 		self.printFunc(self.inStart)
 		self.writeAsmTextFunc('main')
 		self.writeAsmText('call start\n'

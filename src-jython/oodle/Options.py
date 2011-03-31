@@ -54,7 +54,7 @@ class Options:
 				self.m_files.append(a)
 	
 	def getFileList(self):
-		''''''
+		'''Get the list of Oodle files from the command line input'''
 		return self.m_files
 	
 	def displayTokens(self):
@@ -66,14 +66,16 @@ class Options:
 		return self.m_opts['-S']
 
 	def printDebug(self):
+		'''Should debug information be printed or not'''
 		return self.m_print_debug
 
 	def setPrintDebug(self, p=False):
+		'''Set debug infrmation to be printed or not'''
 		self.m_print_debug = p
 	
 	@staticmethod
 	def options():
-		''''''
+		'''Singleton method for this class'''
 		if Options.opts == None:
 			Options.opts = Options()
 		return Options.opts

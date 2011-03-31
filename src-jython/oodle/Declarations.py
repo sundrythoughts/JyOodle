@@ -65,18 +65,23 @@ class MethodDecl(Declaration):
 		return (self.m_arg_types == d.m_arg_types) and (self.m_ret_type == d.m_ret_type)
 	
 	def argStr(self):
+		'''convert he argument list to a string'''
 		return str([t.name() for t in self.m_arg_types])
 	
 	def argTypes(self):
+		'''get the argument types as a list of Type'''
 		return self.m_arg_types
 	
 	def setArgTypes(self, ls):
+		'''set the argument types as a list of Type'''
 		self.m_arg_types = ls
 	
 	def retType(self):
+		'''get the method return type'''
 		return self.m_ret_type
 	
 	def setRetType(self, r):
+		'''set the method return type'''
 		self.m_ret_type = r
 
 class VarDecl(Declaration):
@@ -97,7 +102,9 @@ class VarDecl(Declaration):
 		return 'var: ' + self.m_type.name()
 
 	def varType(self):
+		'''get the variable Type'''
 		return self.m_type
 	
 	def setVarType(self, t):
+		'''set the variable Type'''
 		self.m_type = t

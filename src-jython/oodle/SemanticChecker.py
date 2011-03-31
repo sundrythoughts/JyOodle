@@ -33,18 +33,20 @@ from oodle.Declarations import *
 from oodle import Type
 
 class SemanticChecker(DepthFirstAdapter):
-	''''''
+	'''Check the Oodle source code for correctness'''
 	def __init__(self):
 		DepthFirstAdapter.__init__(self)
-		self.typeMap = dict() #HashMap<Node,Type>
+		self.typeMap = dict() #stores the Type of each node
 		
 		self.hack_has_class = False #HACK for MiniOodle
-		self.valid_scope = False
+		self.valid_scope = False #help determine whether a scope is valid or not
 	
 	###########################################################################
 	## Methods to help with debuggin                                         ##
 	###########################################################################
 	def printFunc(self, f, node=None):
+		'''print the name of the node function and its node string
+		   only works if 'printDebug()' is enabled'''
 		n = (': ' + node.toString().strip()) if node else ''
 		if G.options().printDebug():
 			print 'SemanticChecker: ' + f.__name__ + n
@@ -73,32 +75,26 @@ class SemanticChecker(DepthFirstAdapter):
 		return ret
 	
 	def beginScope(self, b=True):
+		'''shorten the call to add a new scope'''
 		self.valid_scope = b
 		G.symTab().beginScope()
 	
 	def endScope(self, b=True):
+		'''shorten the call to end a new scope'''
 		if self.valid_scope:
 			G.symTab().endScope()
 		self.valid_scope = b
 	
 	def printTypeMap(self):
+		'''print every node in the map and its Type'''
 		for k in self.typeMap:
 			print k,':',self.typeMap[k]
-	
-	def defaultIn(self, node):
-		#print " in: " + node.getClass().getName()
-		#raise Exception("unimplemented in-node")
-		pass
-	
-	def defaultOut(self, node):
-		#print "out: " + node.getClass().getName()
-		#raise Exception("unimplemented out-node")
-		pass
-	
+
 	###########################################################################
 	## METHOD DECLARATION STUFF                                              ##
 	###########################################################################
 	def outAMethod(self, node):
+		'''Manage method leaving a method'''
 		self.printFunc(self.outAMethod)
 		self.endScope() #remove all local variables 
 		
@@ -122,6 +118,9 @@ class SemanticChecker(DepthFirstAdapter):
 			self.beginScope() #make new scope for local variables
 
 	def outAMethodSig(self, node):
+		'''Add method signature to SymbolTable
+		   Error Conditions:
+		    * FIXME'''
 		self.printFunc(self.outAMethodSig, node)
 		nm = node.getId().getText() #get the method name
 		decl = G.symTab().lookup(nm).decl() #get the MethodDecl
@@ -146,14 +145,19 @@ class SemanticChecker(DepthFirstAdapter):
 		decl.setRetType(n_ret)
 	
 	def outAArgList(self, node):
+		''''''
 		self.printFunc(self.outAArgList, node)
 		#self.typeMap[node] = self.typeMap[node.getArgListTail()]
 	
 	def outAArgListTail(self, node):
+		''''''
 		self.printFunc(self.outAArgListTail, node)
 		self.typeMap[node] = self.typeMap[node.getArg()]
 	
 	def outAArg(self, node):
+		'''Manage method 'arg'
+		   Error Conditions:
+		    * var id is alread used in this scope'''
 		self.printFunc(self.outAArg, node)
 		nm = node.getId().getText() #get the variable name
 		if self.isVarNameUsed(nm):
@@ -179,6 +183,11 @@ class SemanticChecker(DepthFirstAdapter):
 	## GENERIC VARIABLE DECLARATION STUFF (also includes method return type) ##
 	###########################################################################	
 	def outAVar(self, node):
+		'''Manage 'var' declarations
+		   Error Conditions:
+		    * var id already used in this scope
+		    * var type is not declared
+		    * var type is mismatched'''
 		self.printFunc(self.outAVar, node)
 		err = False #set if error is detected
 		id = node.getId() #TId node
@@ -224,14 +233,17 @@ class SemanticChecker(DepthFirstAdapter):
 		self.typeMap[node] = self.typeMap[node.getExpr()]
 
 	def outAVarType(self, node):
+		'''Manage 'var' type'''
 		self.printFunc(self.outAVarType, node)
 		self.typeMap[node] = self.typeMap[node.getType()] #store this nodes type
 
 	def outABoolType(self, node):
+		'''Manage 'boolean' type'''
 		self.printFunc(self.outABoolType, node)
 		self.typeMap[node] = Type.BOOLEAN #store this nodes type
 	
 	def outAIntType(self, node):
+		'''Manage 'int' type'''
 		self.printFunc(self.outAIntType, node)
 		self.typeMap[node] = Type.INT #store this nodes type
 		
@@ -243,6 +255,9 @@ class SemanticChecker(DepthFirstAdapter):
 		G.errors().semantic().addUnsupportedFeature('string', ln)
 	
 	def outAUdtType(self, node):
+		'''Manage 'array' type
+		   Error Conditions:
+		    * Unsupported Feature'''
 		self.printFunc(self.outAUdtType, node)
 		err = False
 		nm = node.getId().getText()
@@ -259,6 +274,9 @@ class SemanticChecker(DepthFirstAdapter):
 		self.typeMap[node] = Type.Type(nm)
 	
 	def outAArrayType(self, node):
+		'''Manage 'array' type
+		   Error Conditions:
+		    * Unsupported Feature'''
 		self.printFunc(self.outAArrayType, node)
 		ln = node.getMiscLBrack().getLine()
 		G.errors().semantic().addUnsupportedFeature('array', ln)
@@ -619,6 +637,9 @@ class SemanticChecker(DepthFirstAdapter):
 		self.typeMap[node] = self.typeMap[node.getExpr8()]
 
 	def outAAddExpr4(self, node):
+		'''Manage 'add' expr4 expression
+		   Error Conditions
+		    * lhs type != Type.INT and rhs type != Type.INT'''
 		self.printFunc(self.outAAddExpr4, node)
 		ln = node.getOpPlus().getLine()
 		(lhs, rhs, tp_lhs, tp_rhs) = self.readBinExpr(node)
@@ -880,6 +901,7 @@ class SemanticChecker(DepthFirstAdapter):
 	## MISCELLANEOUS STUFF                                                   ##
 	###########################################################################
 	def outAObjExpr(self, node):
+		''''''
 		self.printFunc(self.outAObjExpr, node)
 	
 	def outACall(self, node):

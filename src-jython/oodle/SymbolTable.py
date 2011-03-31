@@ -61,11 +61,11 @@ class SymbolTable:
 		return None
 	
 	def beginScope(self):
-		''''''
+		'''Start a new scope in the table'''
 		self.m_scope += 1
 	
 	def endScope(self):
-		''''''
+		'''End the current scope in the table'''
 		while len(self.m_tab) > 0 and self.m_tab[0].scope() == self.m_scope:
 			self.m_tab.pop(0)
 		if self.m_scope - 1 < 0:
@@ -82,12 +82,13 @@ class SymbolTable:
 
 	@staticmethod
 	def symTab():
-		''''''
+		'''Singleton method for this class'''
 		if SymbolTable.st_symtab == None:
 			SymbolTable.st_symtab = SymbolTable ()
 		return SymbolTable.st_symtab
 	
 	def printTable(self):
+		'''Debug method for printing the SymbolTable'''
 		print '------------------------------'
 		print 'Symbol Table'
 		print '------------------------------'

@@ -33,7 +33,7 @@ from java.util import Date
 from cps450.oodle.parser import ParserException
 
 class FileConcat:
-	''''''
+	'''Concatenate all input Oodle files into 1 file'''
 	
 	st_fconcat = None #static FileConcat
 
@@ -97,7 +97,7 @@ class FileConcat:
 		return FileConcat.st_fconcat
 
 class FileDump:
-	''''''
+	'''Manipulate a temporary file'''
 	def __init__(self):
 		'''@RETURN: '''
 		dt = Date ()
@@ -112,7 +112,7 @@ class FileDump:
 		self.m_line_count += 1
 	
 	def flush(self):
-		''''''
+		'''write any buffers to the file'''
 		self.m_temp_file_writer.flush ()
 	
 	def getLineCount(self):
@@ -124,7 +124,7 @@ class FileDump:
 		return self.m_temp_file
 
 class FileInfo:
-	''''''
+	'''Hold information about the file'''
 	def __init__(self, f, ln_start, ln_count):
 		'''
 		@f: File
