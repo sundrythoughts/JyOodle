@@ -53,6 +53,9 @@ def main():
 	#FIXME - HUGE HACK for readint/writeint
 	G.symTab().push('readint', oodle.Declarations.MethodDecl([oodle.Type.VOID], oodle.Type.INT))
 	G.symTab().push('writeint', oodle.Declarations.MethodDecl([oodle.Type.INT], oodle.Type.VOID))
+	
+	#FIXME - debug printing
+	G.options().setPrintDebug(True)
 
 	G.options().parseArgs(sys.argv[1:])
 
@@ -86,12 +89,13 @@ def main():
 		G.errors().printErrors()
 		return
 
-	print 'Compiling...'
-	code_gen = CodeGenx86()
-	st_node.apply(code_gen)
-	code_gen.buildBinary(G.options().generateAssembly())
+	#print 'Compiling...'
+	#code_gen = CodeGenx86()
+	#st_node.apply(code_gen)
+	#code_gen.buildBinary(G.options().generateAssembly())
 	
 	print 'DONE'
+	G.symTab().printTable()
 
 if __name__ == "__main__":
 	main()

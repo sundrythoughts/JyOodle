@@ -116,117 +116,254 @@ Ignored Tokens
   line_cont, blank, comment;
   
 Productions
-	start = [cr1]:cr_star klass_list;
+	start                             {-> start}
+	    = [cr1]:cr_star klass_list    {->New start([klass_list.klass])}
+	    ;
   
 	cr_star = T.eol*;
   
 	cr_plus = T.eol+;
 	
-	klass_list = {single} [head]:klass cr_star
-	           | {multi} [head]:klass cr_plus [tail]:klass_list;
+	klass_list                                              {-> klass*}
+	    = {single} [head]:klass cr_star                     {-> [head.klass]}
+	    | {multi} [head]:klass cr_plus [tail]:klass_list    {-> [head.klass, tail.klass]}
+	    ;
 
-	klass = klass_header
-            klass_body
-            klass_footer;
+	klass                 {-> klass}
+	    = klass_header
+	      klass_body
+          klass_footer    {-> New klass(klass_header.klass_header, klass_body.klass_body, klass_footer.klass_footer)}
+         ;
 
-	klass_header =   T.kw_class T.id klass_inherits? T.kw_is cr_plus;
-	klass_inherits = T.kw_inherits T.kw_from T.id;
-	klass_body =     klass_var* method*;
-	klass_footer =   T.kw_end T.id;
+	klass_header                                             {-> klass_header}
+	    = T.kw_class T.id klass_inherits? T.kw_is cr_plus    {-> New klass_header(T.id, klass_inherits)}
+	    ;
+	klass_inherits                        {-> klass_inherits}
+	    = T.kw_inherits T.kw_from T.id    {-> New klass_inherits(T.id)}
+	    ;
+	klass_body                  {-> klass_body}
+	    = klass_var* method*    {-> New klass_body([klass_var.var], [method])}
+	    ;
+	klass_footer           {-> klass_footer}
+	    = T.kw_end T.id    {-> New klass_footer(T.id)}
+	    ;
 	
-	klass_var = var;
+	klass_var    {-> var}
+	    = var    {-> var.var}
+	    ;
 
-	var = T.id var_type? var_assign? cr_plus;
+	var                                         {-> var}
+	    = T.id var_type? var_assign? cr_plus    {-> New var(T.id, var_type.type, var_assign.expr)}
+	    ;
   
-	var_type = T.misc_colon type;
+	var_type                   {-> type}
+	    = T.misc_colon type    {-> type.type}
+	    ;
 
-	var_assign = T.op_assign expr;
+	var_assign                {-> expr}
+	    = T.op_assign expr    {-> expr.expr}
+	    ;
 	
-	method_var = var;
+	method_var   {-> var}
+	    = var    {-> var.var}
+	    ;
 	
-	method_sig = T.id T.misc_l_paren arg_list? T.misc_r_paren var_type?;
+	method_sig                                                      {-> method_sig}
+	    = T.id T.misc_l_paren arg_list? T.misc_r_paren var_type?    {-> New method_sig(T.id, [arg_list.arg], var_type.type)}
+	    ;
   
-	method = method_sig T.kw_is [cr1]:cr_plus
-             method_var*
-             T.kw_begin [cr2]:cr_plus
-             stmt_list
-             T.kw_end T.id [cr3]:cr_plus;
+	method                                 {-> method}
+	    = method_sig T.kw_is [cr1]:cr_plus
+          method_var*
+          T.kw_begin [cr2]:cr_plus
+          stmt_list
+          T.kw_end T.id [cr3]:cr_plus      {-> New method(method_sig, [method_var.var], [stmt_list.stmt])}
+         ;
 
-	arg_list =      arg arg_list_tail*;
-	arg_list_tail = T.misc_semicolon arg;
+	arg_list                    {-> arg*}
+	    = arg arg_list_tail*    {-> [arg, arg_list_tail.arg]}
+	    ;
+	arg_list_tail                 {-> arg}
+	    = T.misc_semicolon arg    {-> arg}
+	    ;
   
-	arg = T.id T.misc_colon type;
+	arg                             {-> arg}
+	    = T.id T.misc_colon type    {-> New arg(T.id, type)}
+	    ;
 
-	stmt_list =  stmt_line*;
+	stmt_list            {-> stmt*}
+	    =  stmt_line*    {-> [stmt_line.stmt]}
+	    ;
 
-	stmt_line = stmt cr_plus;
+	stmt_line             {-> stmt}
+	    = stmt cr_plus    {-> stmt}
+	    ;
 
-	stmt = {assign} T.id arr_expr_list? T.op_assign expr
-         | {if} [if1]:T.kw_if expr T.kw_then cr_plus
-                stmt_list
-                stmt_else?
-                T.kw_end [if2]:T.kw_if
-         | {loop} [lp1]:T.kw_loop T.kw_while expr cr_plus
-                  stmt_list
-                  T.kw_end [lp2]:T.kw_loop
-         | {call} call;
+	stmt                                                   {-> stmt}
+	    = {assign} T.id arr_expr_list? T.op_assign expr    {-> New stmt.assign(T.id, [arr_expr_list.expr], expr)}
+        | {if} [if1]:T.kw_if expr T.kw_then cr_plus
+               stmt_list
+               stmt_else?
+               T.kw_end [if2]:T.kw_if                      {-> New stmt.if(expr, [stmt_list.stmt], [stmt_else.stmt])}
+        | {loop} [lp1]:T.kw_loop T.kw_while expr cr_plus
+                 stmt_list
+                 T.kw_end [lp2]:T.kw_loop                  {-> New stmt.loop(expr, [stmt_list.stmt])}
+        | {call} call                                      {-> New stmt.call(call.call)}
+        ;
 
-	stmt_else = T.kw_else cr_plus stmt_list;
+	stmt_else                            {-> stmt*}
+	    = T.kw_else cr_plus stmt_list    {-> [stmt_list.stmt]}
+	    ;
 
-	type = {int} T.kw_int
-         | {string} T.kw_string
-         | {bool} T.kw_boolean
-         | {udt} T.id
-         | {array} type T.misc_l_brack expr? T.misc_r_brack ;
+	type                                                      {-> type}
+	    = {int} T.kw_int                                      {-> New type.int(T.kw_int)}
+        | {string} T.kw_string                                {-> New type.string(T.kw_string)}
+        | {bool} T.kw_boolean                                 {-> New type.bool(T.kw_boolean)}
+        | {udt} T.id                                          {-> New type.udt(T.id)}
+        | {array} type T.misc_l_brack expr? T.misc_r_brack    {-> New type.array(type, expr)}
+        ;
 
-	expr = {or}    [e1]:expr1 T.kw_or [e2]:expr1
-	     | {other} expr1;
+	expr                                           {-> expr}
+	    = {or}    [e1]:expr1 T.kw_or [e2]:expr1    {-> New expr.or(e1.expr, e2.expr)}
+	    | {other} expr1                            {-> expr1.expr}
+	    ;
 
-	expr1 = {and}   [e1]:expr1 T.kw_and [e2]:expr2
-	      | {other} expr2;
+	expr1                                           {-> expr}
+	    = {and}   [e1]:expr1 T.kw_and [e2]:expr2	{-> New expr.and(e1.expr, e2.expr)}
+	    | {other} expr2                             {-> expr2.expr}
+	    ;
 
-	expr2 = {lte}   [e1]:expr3 T.op_lt_eq [e2]:expr3
-	      | {gte}   [e1]:expr3 T.op_gt_eq [e2]:expr3
-          | {lt}    [e1]:expr3 T.op_lt    [e2]:expr3
-          | {gt}    [e1]:expr3 T.op_gt    [e2]:expr3
-          | {eq}    [e1]:expr3 T.op_eq    [e2]:expr3
-          | {other} expr3;
+	expr2                                             {-> expr}
+	    = {lte}   [e1]:expr3 T.op_lt_eq [e2]:expr3    {-> New expr.lte(e1.expr, e2.expr)}
+	    | {gte}   [e1]:expr3 T.op_gt_eq [e2]:expr3    {-> New expr.gte(e1.expr, e2.expr)}
+        | {lt}    [e1]:expr3 T.op_lt    [e2]:expr3    {-> New expr.lt(e1.expr, e2.expr)}
+        | {gt}    [e1]:expr3 T.op_gt    [e2]:expr3    {-> New expr.gt(e1.expr, e2.expr)}
+        | {eq}    [e1]:expr3 T.op_eq    [e2]:expr3    {-> New expr.eq(e1.expr, e2.expr)}
+        | {other} expr3                               {-> expr3.expr}
+        ;
 
-	expr3 = {concat} [e1]:expr3 T.op_concat [e2]:expr4
-	      | {other}  expr4;
+	expr3                                               {-> expr}
+	    = {concat} [e1]:expr3 T.op_concat [e2]:expr4    {-> New expr.concat(e1.expr, e2.expr)}
+	    | {other}  expr4                                {-> expr4.expr}
+	    ;
 
-	expr4 = {add}   [e1]:expr4 T.op_plus  [e2]:expr5
-          | {sub}   [e1]:expr4 T.op_minus [e2]:expr5
-          | {other} expr5;
+	expr4                                             {-> expr}
+	    = {add}   [e1]:expr4 T.op_plus  [e2]:expr5    {-> New expr.add(e1.expr, e2.expr)}
+        | {sub}   [e1]:expr4 T.op_minus [e2]:expr5    {-> New expr.sub(e1.expr, e2.expr)}
+        | {other} expr5                               {-> expr5.expr}
+        ;
 
-    expr5 = {mult}  [e1]:expr5 T.op_mult [e2]:expr8
-          | {div}   [e1]:expr5 T.op_div [e2]:expr8
-          | {other} expr8;
+    expr5                                            {-> expr}
+        = {mult}  [e1]:expr5 T.op_mult [e2]:expr8    {-> New expr.mult(e1.expr, e2.expr)}
+        | {div}   [e1]:expr5 T.op_div [e2]:expr8     {-> New expr.div(e1.expr, e2.expr)}
+        | {other} expr8                              {-> expr8.expr}
+        ;
           
-    expr8 = {pos}   op_plus expr9
-          | {neg}   op_minus expr9
-          | {not}   T.kw_not expr9
-          | {other} expr9;
+    expr8                           {-> expr}
+        = {pos}   op_plus expr9     {-> New expr.pos(expr9.expr)}
+        | {neg}   op_minus expr9    {-> New expr.neg(expr9.expr)}
+        | {not}   T.kw_not expr9    {-> New expr.not(expr9.expr)}
+        | {other} expr9             {-> expr9.expr}
+        ;
 
-	expr9 = {id}    T.id
-          | {str}   T.str_lit
-          | {int}   T.int_lit
-          | {true}  T.kw_true
-          | {false} T.kw_false
-          | {null}  T.kw_null
-          | {me}    T.kw_me
-          | {new}   T.kw_new type
-          | {par}   T.misc_l_paren expr T.misc_r_paren
-          | {array} T.id arr_expr_list
-          | {call} call;
+	expr9 {-> expr}
+	    = {id}    T.id                                  {-> New expr.id(T.id)}
+        | {str}   T.str_lit                             {-> New expr.str(T.str_lit)}
+        | {int}   T.int_lit                             {-> New expr.int(T.int_lit)}
+        | {true}  T.kw_true                             {-> New expr.true(T.kw_true)}
+        | {false} T.kw_false                            {-> New expr.false(T.kw_false)}
+        | {null}  T.kw_null                             {-> New expr.null(T.kw_null)}
+        | {me}    T.kw_me                               {-> New expr.me(T.kw_me)}
+        | {new}   T.kw_new type                         {-> New expr.new(type)}
+        | {par}   T.misc_l_paren expr T.misc_r_paren    {-> expr.expr}
+        | {array} T.id arr_expr_list                    {-> New expr.array(T.id, [arr_expr_list.expr])}
+        | {call}  call                                  {-> New expr.call(call.call)}
+        ;
 
-	arr_expr_list =      T.misc_l_brack expr T.misc_r_brack arr_expr_list_tail*;
-	arr_expr_list_tail = T.misc_l_brack expr T.misc_r_brack;
+	arr_expr_list                                                   {-> expr*}
+	    = T.misc_l_brack expr T.misc_r_brack arr_expr_list_tail*    {-> [expr, arr_expr_list_tail.expr]}
+	    ;
+	arr_expr_list_tail                          {-> expr}
+	    = T.misc_l_brack expr T.misc_r_brack    {-> expr}
+	    ;
 
-	expr_list =      expr expr_list_tail*;
-	expr_list_tail = T.misc_comma expr;
+	expr_list                     {-> expr*}
+	    = expr expr_list_tail*    {-> [expr, expr_list_tail.expr]}
+	    ;
+	expr_list_tail             {-> expr}
+	    = T.misc_comma expr    {-> expr}
+	    ;
 	
-	call = obj_expr? T.id T.misc_l_paren expr_list? T.misc_r_paren;
+	call                                                             {-> call}
+	    = obj_expr? T.id T.misc_l_paren expr_list? T.misc_r_paren    {-> New call(obj_expr.expr, T.id, [expr_list.expr])}
+	    ;
 
-	obj_expr = expr9 T.misc_period;
+	obj_expr                     {-> expr}
+	    = expr9 T.misc_period    {-> expr9.expr}
+	    ;
 
+Abstract Syntax Tree
+	start = [klasses]:klass*
+	      ;
+
+	klass = klass_header klass_body klass_footer;
+
+	klass_header = [id]:T.id klass_inherits?;
+	klass_inherits = [id]:T.id;
+	klass_body = [vars]:var* [methods]:method*;
+	klass_footer =  [id]:T.id;
+
+	var = [id]:T.id [tp]:type? [expr]:expr?
+	    ;
+
+	method_sig = [id]:T.id [args]:arg* [ret]:type?
+	           ;
+
+	method = [sig]:method_sig [vars]:var* [stmts]:stmt*
+	       ;
+
+	arg = [id]:T.id [tp]:type
+	    ;
+
+	stmt = {assign} [id]:T.id [index]:expr* [expr]:expr
+	     | {if}     [expr]:expr [if_stmts]:stmt* [else_stmts]:stmt*
+	     | {loop}   [expr]:expr [loop_stmts]:stmt*
+	     | {call}   [call]:call
+	     ;
+
+	type = {int}      T.kw_int
+	     | {string}   T.kw_string
+	     | {bool}     T.kw_boolean
+	     | {udt}      [id]:T.id
+	     | {array}    [tp]:type [expr]:expr?
+	     ;
+
+	expr = {or}      [left]:expr [right]:expr
+	     | {and}     [left]:expr [right]:expr
+	     | {lte}     [left]:expr [right]:expr
+	     | {gte}     [left]:expr [right]:expr
+	     | {lt}      [left]:expr [right]:expr
+	     | {gt}      [left]:expr [right]:expr
+	     | {eq}      [left]:expr [right]:expr
+	     | {concat}  [left]:expr [right]:expr
+	     | {add}     [left]:expr [right]:expr
+	     | {sub}     [left]:expr [right]:expr
+	     | {mult}    [left]:expr [right]:expr
+	     | {div}     [left]:expr [right]:expr
+	     | {pos}     [expr]:expr
+	     | {neg}     [expr]:expr
+	     | {not}     [expr]:expr
+	     | {id}      [id]:T.id
+	     | {str}     T.str_lit
+	     | {int}     T.int_lit
+	     | {true}    T.kw_true
+	     | {false}   T.kw_false
+	     | {null}    T.kw_null
+	     | {me}      T.kw_me
+	     | {new}     [tp]:type
+	     | {array}   [id]:T.id [index]:expr*
+	     | {call}    [call]:call
+	     ;
+
+	call = [expr]:expr? [id]:T.id [args]:expr*
+	     ;

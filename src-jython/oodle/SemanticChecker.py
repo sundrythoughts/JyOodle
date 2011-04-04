@@ -127,18 +127,16 @@ class SemanticChecker(DepthFirstAdapter):
 
 		#get argument list
 		n_args = [] #initialize to void parameters
-		tmp = node.getArgList()
-		tmp = None if tmp == None else tmp.getArg()
-		if tmp != None:
-			n_args = [self.typeMap[tmp]] #get first argument
-			for n in node.getArgList().getArgListTail(): #get remaining arguments
+		args = node.getArgs()
+		if args != None:
+			for n in args: #get remaining arguments
 				n_args.append(self.typeMap[n])
 
 		#get return type
 		n_ret = Type.VOID #initialize to void return
-		tmp = node.getVarType()
-		if tmp != None:
-			n_ret = self.typeMap[tmp]
+		ret = node.getRet()
+		if ret != None:
+			n_ret = self.typeMap[ret]
 
 		#set MethodDecl arg types and return type
 		decl.setArgTypes(n_args)
@@ -163,7 +161,7 @@ class SemanticChecker(DepthFirstAdapter):
 		if self.isVarNameUsed(nm):
 			G.errors().semantic().add("variable '" + nm + "' already used", ln)
 
-		tp = self.typeMap[node.getType()] #get the variable type from the child node
+		tp = self.typeMap[node.getTp()] #get the variable type from the child node
 		self.typeMap[node] = tp              #store this nodes type
 		G.symTab().push(nm, VarDecl(tp))   #add the (node id, type) to the SymbolTable
 	
@@ -201,16 +199,16 @@ class SemanticChecker(DepthFirstAdapter):
 		
 		#check assignment type
 		tp_assign = Type.NONE
-		if node.getVarAssign() != None:
-			tp_assign = self.typeMap[node.getVarAssign()]
+		if node.getExpr() != None:
+			tp_assign = self.typeMap[node.getExpr()]
 			
 		
 		#check declared type
 		tp_decl = Type.NONE
-		if node.getVarType() == None:
+		if node.getTp() == None:
 			G.errors().semantic().add("variable '" + nm + "' must have a type", ln)
 		else:
-			tp_decl = self.typeMap[node.getVarType()] #get the variable type from the child node
+			tp_decl = self.typeMap[node.getTp()] #get the variable type from the child node
 		
 		#compare declared and assigned types
 		if tp_assign != Type.NONE and tp_decl != Type.NONE and tp_assign != tp_decl:
@@ -221,21 +219,23 @@ class SemanticChecker(DepthFirstAdapter):
 		self.typeMap[node] = tp_decl              #store this nodes type
 		G.symTab().push(nm, VarDecl(tp_decl))   #add the (node id, type) to the SymbolTable
 	
-	def outAVarAssign(self, node):
-		'''Manage assignment during variable declaration
-		   Error Conditions:
-		    * HACK MiniOodle: any assigment during declaration is unsupported'''
-		self.printFunc(self.outAVarAssign, node)
-		#HACK MiniOodle: assignment not supported
-		ln = node.getOpAssign().getLine()
-		G.errors().semantic().addUnsupportedFeature('variable initialization', ln)
-
-		self.typeMap[node] = self.typeMap[node.getExpr()]
-
-	def outAVarType(self, node):
-		'''Manage 'var' type'''
-		self.printFunc(self.outAVarType, node)
-		self.typeMap[node] = self.typeMap[node.getType()] #store this nodes type
+#===============================================================================
+#	def outAVarAssign(self, node):
+#		'''Manage assignment during variable declaration
+#		   Error Conditions:
+#		    * HACK MiniOodle: any assigment during declaration is unsupported'''
+#		self.printFunc(self.outAVarAssign, node)
+#		#HACK MiniOodle: assignment not supported
+#		ln = node.getOpAssign().getLine()
+#		G.errors().semantic().addUnsupportedFeature('variable initialization', ln)
+# 
+#		self.typeMap[node] = self.typeMap[node.getExpr()]
+# 
+#	def outAVarType(self, node):
+#		'''Manage 'var' type'''
+#		self.printFunc(self.outAVarType, node)
+#		self.typeMap[node] = self.typeMap[node.getType()] #store this nodes type
+#===============================================================================
 
 	def outABoolType(self, node):
 		'''Manage 'boolean' type'''
@@ -335,7 +335,20 @@ class SemanticChecker(DepthFirstAdapter):
 		self.printFunc(self.inAKlassInherits, node)
 		ln = node.getKwFrom().getLine() #get the line number
 		G.errors().semantic().addUnsupportedFeature("'inherits from'", ln)
-		
+
+	def outAKlassBody(self, node):
+		'''Manage class variables
+		   Error Conditions:
+		    * HACK MiniOodle: no class variable initialization'''
+		self.printFunc(self.outAKlassBody)
+		vars = node.getVars()
+
+		#class variable init is unsupported in MiniOodle
+		for v in vars:
+			if v.getExpr() != None:
+				ln = v.getId().getLine() #line number
+				G.errors().semantic().addUnsupportedFeature("class variable initialization", ln)
+
 	def outAKlassVar(self, node):
 		'''Manage class variables
 		   Error Conditions:
@@ -463,41 +476,41 @@ class SemanticChecker(DepthFirstAdapter):
 		
 		self.typeMap[node] = tp
 
-	def outAStrExpr9(self, node):
+	def outAStrExpr(self, node):
 		'''Manage 'string' expr9 expression
 		   Error Conditions
 		    * HACK MiniOodle: string is unsupported'''
-		self.printFunc(self.outAStrExpr9, node)
+		self.printFunc(self.outAStrExpr, node)
 		ln = node.getStrLit().getLine()
 		G.errors().semantic().addUnsupportedFeature("string", ln)
 		self.typeMap[node] = Type.STRING
 
-	def outAIntExpr9(self, node):
+	def outAIntExpr(self, node):
 		'''Manage 'integer' expr9 expression
 		   Error Conditions
 		    * NONE'''
-		self.printFunc(self.outAIntExpr9, node)
+		self.printFunc(self.outAIntExpr, node)
 		self.typeMap[node] = Type.INT
 
-	def outATrueExpr9(self, node):
-		'''Manage 'true' expr9 expression
+	def outATrueExpr(self, node):
+		'''Manage 'true' expression
 		   Error Conditions
 		    * NONE'''
-		self.printFunc(self.outATrueExpr9, node)
+		self.printFunc(self.outATrueExpr, node)
 		self.typeMap[node] = Type.BOOLEAN
 
-	def outAFalseExpr9(self, node):
-		'''Manage 'false' expr9 expression
+	def outAFalseExpr(self, node):
+		'''Manage 'false' expression
 		   Error Conditions
 		    * NONE'''
-		self.printFunc(self.outAFalseExpr9, node)
+		self.printFunc(self.outAFalseExpr, node)
 		self.typeMap[node] = Type.BOOLEAN
 
-	def outANullExpr9(self, node):
-		'''Manage 'null' expr9 expression
+	def outANullExpr(self, node):
+		'''Manage 'null' expr expression
 		   Error Conditions
 		    * NONE'''
-		self.printFunc(self.outANullExpr9, node)
+		self.printFunc(self.outANullExpr, node)
 		self.typeMap[node] = Type.NULL
 
 	def outAMeExpr9(self, node):
