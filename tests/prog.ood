@@ -4,6 +4,9 @@ class Main is
 	x: int
 	b: boolean
 	start(i:int ; b:boolean) : int is
+		i2: int := 5
+		b1: boolean := false
+		s1: string := "test"
 	begin
 	end start
 end Main

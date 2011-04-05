@@ -109,7 +109,7 @@ class CodeGenx86(DepthFirstAdapter):
 	def buildBinary(self, sopt=False):
 		'''generate the binary using GCC
 		   if -S option is given, the generates a *.s assembly file instead'''
-		#make new asm file with .s extension
+		#make new file with .s extension
 		fn = G.options().getFileList()[-1]
 		fn = fn[:fn.rfind('.ood')]
 		asm_fn = fn + '.s'
@@ -118,7 +118,7 @@ class CodeGenx86(DepthFirstAdapter):
 
 		
 		
-		#write asm to file
+		#write asm to .s file
 		for l in self.asm_list:
 			f.write(l)
 			f.write('\n')
@@ -272,6 +272,21 @@ class CodeGenx86(DepthFirstAdapter):
 		''''''
 		self.printFunc(self.inAKlassInherits, node)
 
+	def inAKlassBody(self, node):
+		'''Manage class variables
+		   Error Conditions:
+		    * HACK MiniOodle: no class variable initialization'''
+		self.printFunc(self.inAKlassBody)
+		vars = node.getVars()
+
+		#class variable init is unsupported in MiniOodle
+		for v in vars:
+			ln = v.getId().getLine() #line number
+			src = v.toString().strip()
+			nm = self.prefix() + v.getId().getText() #variable name
+			self.writeAsmComment('#' + src, ln)
+			self.writeAsm('\t.comm\t' + nm + ',4,4') #global class variable
+
 	def inAKlassVar(self, node):
 		'''Generate 'class variable' comments'''
 		self.printFunc(self.inAKlassVar)
@@ -309,55 +324,49 @@ class CodeGenx86(DepthFirstAdapter):
 		'''Generate 'if-else' code'''
 		self.printFunc(self.caseAIfStmt, node)
 		
-		ln = node.getIf1().getLine() #if-else line number
+		ln = node.getThen().getLine() #if-else line number
 		src_expr = node.getExpr().toString().strip() #if-else source code
 		else_lbl = self.nextLabel() #unique label for else start
 		end_lbl = self.nextLabel()  #unique label for end of if-else
-
+		
 		self.inAIfStmt(node)
-		if node.getIf1() != None:
-			node.getIf1().apply(self)
-			self.writeAsmTextComment('if ' + src_expr, ln)
 		if node.getExpr() != None:
 			node.getExpr().apply(self)
+			self.writeAsmTextComment('if ' + src_expr, ln)
 			#check for boolean value in expression
 			self.writeAsmText('popl %eax\n'
 						      'cmpl $0, %eax\n'
 						      'jz ' + else_lbl
 						      )
-		if node.getKwThen() != None:
-			node.getKwThen().apply(self)
-		if node.getCrPlus() != None:
-			node.getCrPlus().apply(self)
-		if node.getStmtList() != None:
-			node.getStmtList().apply(self)
+		if node.getThen() != None:
+			node.getThen().apply(self)
+		if True: #scope block
+			copy = node.getIfStmts()[:]
+			for e in copy:
+				e.apply(self)
 			self.writeAsmText('jmp ' + end_lbl) #jump to end of if-else
 			self.writeAsmTextLabel(else_lbl)    #else label
-		if node.getStmtElse() != None:
-			node.getStmtElse().apply(self)
-		if node.getKwEnd() != None:
-			node.getKwEnd().apply(self)
-			self.writeAsmTextLabel(end_lbl) #end label
-		if node.getIf2() != None:
-			node.getIf2().apply(self)
+		if True: #scope block
+			copy = node.getElseStmts()[:]
+			for e in copy:
+				e.apply(self)
+		self.writeAsmTextLabel(end_lbl) #end label
 		self.outAIfStmt(node)
 
 	def caseALoopStmt(self, node):
 		'''Generate 'loop while' code'''
 		self.printFunc(self.caseALoopStmt, node)
 
-		ln = node.getLp1().getLine() #loop line number
+		ln = node.getWhile().getLine() #loop line number
 		src_expr = node.getExpr().toString().strip() #loop source code
 		start_lbl = self.nextLabel() #unique label for loop start
 		end_lbl = self.nextLabel()   #unique label for loop end
 
-		self.inALoopStmt(node)
-		if node.getLp1() != None:
-			node.getLp1().apply(self)
+		self.inALoopStmt(node);
+		if node.getWhile() != None:
+			node.getWhile().apply(self)
 			self.writeAsmTextComment('loop while ' + src_expr, ln)
 			self.writeAsmTextLabel(start_lbl) #start loop label
-		if node.getKwWhile() != None:
-			node.getKwWhile().apply(self)
 		if node.getExpr() != None:
 			node.getExpr().apply(self)
 			#check boolean value of expression
@@ -365,16 +374,12 @@ class CodeGenx86(DepthFirstAdapter):
 						      'cmpl $0, %eax\n'
 						      'jz ' + end_lbl
 						      )
-		if node.getCrPlus() != None:
-			node.getCrPlus().apply(self)
-		if node.getStmtList() != None:
-			node.getStmtList().apply(self)
-		if node.getKwEnd() != None:
-			node.getKwEnd().apply(self)
-			self.writeAsmText('jmp ' + start_lbl) #repeat loop jump
-			self.writeAsmTextLabel(end_lbl)       #end loop label
-		if node.getLp2() != None:
-			node.getLp2().apply(self)
+		if True: #scope block
+			copy = node.getLoopStmts()[:]
+			for e in copy:
+				e.apply(self)
+		self.writeAsmText('jmp ' + start_lbl) #repeat loop jump
+		self.writeAsmTextLabel(end_lbl)       #end loop label
 		self.outALoopStmt(node)
 
 	def outACallStmt(self, node):
@@ -386,77 +391,77 @@ class CodeGenx86(DepthFirstAdapter):
 	## EXPRESSION STUFF													  ##
 	###########################################################################
 	
-	def outAIdExpr9(self, node):
+	def outAIdExpr(self, node):
 		'''Generate 'id' code
 		   Types
 		    * a variable name'''
-		self.printFunc(self.outAIdExpr9, node)
+		self.printFunc(self.outAIdExpr, node)
 		nm = self.prefix() + node.getId().getText()
 		self.writeAsmText('pushl ' + nm)
 
-	def outAStrExpr9(self, node):
+	def outAStrExpr(self, node):
 		''''''
-		self.printFunc(self.outAStrExpr9, node)
+		self.printFunc(self.outAStrExpr, node)
 
-	def outAIntExpr9(self, node):
+	def outAIntExpr(self, node):
 		'''Generate 'int' code
 		   Types
 		    * Type.INT'''
-		self.printFunc(self.outAIntExpr9, node)
+		self.printFunc(self.outAIntExpr, node)
 		imm = '$' + node.getIntLit().getText()
 		self.writeAsmText('pushl ' + imm)
 
-	def outATrueExpr9(self, node):
+	def outATrueExpr(self, node):
 		'''Generate 'true' code
 		   Types
 		    * Type.BOOLEAN'''
-		self.printFunc(self.outATrueExpr9, node)
+		self.printFunc(self.outATrueExpr, node)
 		self.writeAsmText('pushl $1')
 
-	def outAFalseExpr9(self, node):
+	def outAFalseExpr(self, node):
 		'''Generate 'false' code
 		   Types
 		    * Type.BOOLEAN'''
-		self.printFunc(self.outAFalseExpr9, node)
+		self.printFunc(self.outAFalseExpr, node)
 		self.writeAsmText('pushl $0')
 
-	def outANullExpr9(self, node):
+	def outANullExpr(self, node):
 		''''''
-		self.printFunc(self.outANullExpr9, node)
+		self.printFunc(self.outANullExpr, node)
 
-	def outAParExpr9(self, node):
+	def outAParExpr(self, node):
 		''''''
-		self.printFunc(self.outAParExpr9, node)
+		self.printFunc(self.outAParExpr, node)
 
-	def outACallExpr9(self, node):
+	def outACallExpr(self, node):
 		'''Generate 'call expr9' code
 		   This node is always used for calls that return a value'''
-		self.printFunc(self.outACallExpr9, node)
+		self.printFunc(self.outACallExpr, node)
 		self.writeAsmText('pushl %eax')
 
-	def outAPosExpr8(self, node):
+	def outAPosExpr(self, node):
 		'''Generate 'positive' code
 		   Types
 		    * operand == Type.INT
 		   Special Cases
 		    * this operation does absolutely nothing'''
-		self.printFunc(self.outAPosExpr8, node)
+		self.printFunc(self.outAPosExpr, node)
 
-	def outANegExpr8(self, node):
+	def outANegExpr(self, node):
 		'''Generate 'negation' code
 		   Types
 		    * operand == Type.INT'''
-		self.printFunc(self.outANegExpr8, node)
+		self.printFunc(self.outANegExpr, node)
 		self.writeAsmText('popl %eax\n'
 					      'neg %eax\n'
 					      'pushl %eax'
 					      )
 
-	def outANotExpr8(self, node):
+	def outANotExpr(self, node):
 		'''Generate 'not' code
 		   Types
 		    * operand == Type.BOOLEAN'''
-		self.printFunc(self.outANotExpr8, node)
+		self.printFunc(self.outANotExpr, node)
 		self.writeAsmText('popl %eax\n'
 					      'testl %eax, %eax\n'
 					      'sete %al\n'
@@ -464,57 +469,57 @@ class CodeGenx86(DepthFirstAdapter):
 					      'pushl %eax'
 					      )
 
-	def outAMultExpr5(self, node):
+	def outAMultExpr(self, node):
 		'''Generate 'multiplication' code
 		   Types
 		    * lhs && rhs == Type.INT'''
-		self.printFunc(self.outAMultExpr5, node)
+		self.printFunc(self.outAMultExpr, node)
 		self.writeAsmText('popl %ebx\n'
 					      'popl %eax\n'
 					      'imul %ebx, %eax\n'
 					      'pushl %eax')
 
-	def outADivExpr5(self, node):
+	def outADivExpr(self, node):
 		'''Generate 'division' code
 		   Types
 		    * lhs && rhs == Type.INT'''
-		self.printFunc(self.outAMultExpr5, node)
+		self.printFunc(self.outADivExpr, node)
 		self.writeAsmText('popl %ecx\n'
 					  'popl %eax\n'
 					  'cdq\n'
 					  'idiv %ecx\n'
 					  'pushl %eax')
 
-	def outAAddExpr4(self, node):
+	def outAAddExpr(self, node):
 		'''Generate 'addition' code
 		   Types
 		    * lhs && rhs == Type.INT'''
-		self.printFunc(self.outAAddExpr4, node)
+		self.printFunc(self.outAAddExpr, node)
 		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'addl %ebx, %eax\n'
 					  'pushl %eax')
 	
-	def outASubExpr4(self, node):
+	def outASubExpr(self, node):
 		'''Generate 'subtraction' code
 		   Types
 		    * lhs && rhs == Type.INT'''
-		self.printFunc(self.outASubExpr4, node)
+		self.printFunc(self.outASubExpr, node)
 		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'subl %ebx, %eax\n'
 					  'pushl %eax')
 
-	def outAConcatExpr3(self, node):
+	def outAConcatExpr(self, node):
 		''''''
-		self.printFunc(self.outAConcatExpr3, node)
+		self.printFunc(self.outAConcatExpr, node)
 
-	def outALteExpr2(self, node):
+	def outALteExpr(self, node):
 		'''Generate 'less than or equal' code
 		   Types
 			* lhs && rhs == Type.INT
 			* FIXME - lhs && rhs == Type.String'''
-		self.printFunc(self.outALteExpr2)
+		self.printFunc(self.outALteExpr)
 		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'cmpl %ebx, %eax\n'
@@ -523,12 +528,12 @@ class CodeGenx86(DepthFirstAdapter):
 					  'pushl %eax'
 					  )
 
-	def outAGteExpr2(self, node):
+	def outAGteExpr(self, node):
 		'''Generate 'greater than or equal' code
 		   Types
 			* lhs && rhs == Type.INT
 			* FIXME - lhs && rhs == Type.String'''
-		self.printFunc(self.outAGteExpr2, node)
+		self.printFunc(self.outAGteExpr, node)
 		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'cmpl %ebx, %eax\n'
@@ -537,12 +542,12 @@ class CodeGenx86(DepthFirstAdapter):
 					  'pushl %eax'
 					  )
 
-	def outALtExpr2(self, node):
+	def outALtExpr(self, node):
 		'''Generate 'less than' code
 		   Types
 			* lhs && rhs == Type.INT
 			* FIXME - lhs && rhs == Type.STRING'''
-		self.printFunc(self.outALtExpr2, node)
+		self.printFunc(self.outALtExpr, node)
 		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'cmpl %ebx, %eax\n'
@@ -551,12 +556,12 @@ class CodeGenx86(DepthFirstAdapter):
 					  'pushl %eax'
 					  )
 
-	def outAGtExpr2(self, node):
+	def outAGtExpr(self, node):
 		'''Generate 'greater than' code
 		   Types
 			* lhs && rhs == Type.INT
 			* FIXME - lhs && rhs == Type.STRING'''
-		self.printFunc(self.outAGtExpr2, node)
+		self.printFunc(self.outAGtExpr, node)
 		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'cmpl %ebx, %eax\n'
@@ -565,13 +570,13 @@ class CodeGenx86(DepthFirstAdapter):
 					  'pushl %eax'
 					  )
 
-	def outAEqExpr2(self, node):
+	def outAEqExpr(self, node):
 		'''Generate 'less than' code
 		   Types
 			* lhs && rhs == Type.INT
 			* FIXME - lhs && rhs == Type.STRING
 			* lhs && rhs == Type.BOOLEAN'''
-		self.printFunc(self.outAEqExpr2, node)
+		self.printFunc(self.outAEqExpr, node)
 		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'cmpl %ebx, %eax\n'
@@ -580,11 +585,11 @@ class CodeGenx86(DepthFirstAdapter):
 					  'pushl %eax'
 					  )
 	
-	def outAAndExpr1(self, node):
+	def outAAndExpr(self, node):
 		'''Generate 'and' code
 		   Types
 			* lhs && rhs == Type.BOOLEAN'''
-		self.printFunc(self.outAAndExpr1, node)
+		self.printFunc(self.outAAndExpr, node)
 		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'and %ebx, %eax\n'
@@ -594,34 +599,27 @@ class CodeGenx86(DepthFirstAdapter):
 		'''Generate 'or' code
 		   Types
 			* lhs && rhs == Type.BOOLEAN'''
-		self.printFunc(self.outAAndExpr1, node)
+		self.printFunc(self.outAOrExpr, node)
 		self.writeAsmText('popl %ebx\n'
 					  'popl %eax\n'
 					  'or %ebx, %eax\n'
 					  'pushl %eax')
 
-	def outAExprList(self, node):
-		''''''
-		self.printFunc(self.outAExprList, node)
-
-	###########################################################################
-	## MISCELLANEOUS STUFF												   ##
-	###########################################################################
+	##########################################################################
+	# MISCELLANEOUS STUFF												   ##
+	##########################################################################
 	def caseACall(self, node):
 		'''FIXME - huge hack for MiniOodle readint/writeint'''
 		self.inACall(node)
 		#FIXME - huge hack for MiniOodle readint/writeint
-		#if node.getObjExpr() != None:
-		#	node.getObjExpr().apply(self)
+		#if node.getExpr() != None:
+		#	node.getExpr().apply(self)
 		if node.getId() != None:
 			node.getId().apply(self)
-		if node.getMiscLParen() != None:
-			node.getMiscLParen().apply(self)
-		if node.getExprList() != None:
-			node.getExprList().apply(self)
-		if node.getMiscRParen() != None:
-			node.getMiscRParen().apply(self)
-		self.outACall(node);
+		copy = node.getArgs()[:]
+		for e in copy:
+			e.apply(self)
+		self.outACall(node)
 
 	def outACall(self, node):
 		'''Generate method 'call' code

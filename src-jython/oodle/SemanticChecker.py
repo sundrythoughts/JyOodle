@@ -96,6 +96,16 @@ class SemanticChecker(DepthFirstAdapter):
 	def outAMethod(self, node):
 		'''Manage method leaving a method'''
 		self.printFunc(self.outAMethod)
+		vars = node.getVars()
+		
+
+		#HACK - local variable and local variable init are unsupported in MiniOodle
+		for v in vars:
+			ln = v.getId().getLine() #line number
+			G.errors().semantic().addUnsupportedFeature("local variable", ln)
+			if v.getExpr() != None:
+				G.errors().semantic().addUnsupportedFeature("local variable initialization", ln)
+
 		self.endScope() #remove all local variables 
 		
 	def inAMethodSig(self, node):
@@ -326,8 +336,7 @@ class SemanticChecker(DepthFirstAdapter):
 		G.symTab().push(node.getId().getText(), ClassDecl())
 		self.beginScope()
 		self.hack_has_class = True #HACK for MiniOodle: no class declared yet
-			
-	
+
 	def inAKlassInherits(self, node):
 		'''Manage inheritance
 		   Error Conditions:
@@ -336,7 +345,7 @@ class SemanticChecker(DepthFirstAdapter):
 		ln = node.getKwFrom().getLine() #get the line number
 		G.errors().semantic().addUnsupportedFeature("'inherits from'", ln)
 
-	def outAKlassBody(self, node):
+	def inAKlassBody(self, node):
 		'''Manage class variables
 		   Error Conditions:
 		    * HACK MiniOodle: no class variable initialization'''
@@ -370,7 +379,7 @@ class SemanticChecker(DepthFirstAdapter):
 		    * rhs id must exist and be a VarDecl or (return type) MethodDecl
 		    * lhs and rhs must have equal types'''
 		self.printFunc(self.outAAssignStmt, node)
-		ln = node.getOpAssign().getLine()
+		ln = node.getId().getLine()
 		nm = node.getId().getText()
 		sym = G.symTab().lookup(nm)
 		tp_lhs = Type.NONE
@@ -397,7 +406,7 @@ class SemanticChecker(DepthFirstAdapter):
 		   Error Conditions:
 		    * expr type != Type.BOOLEAN'''
 		self.printFunc(self.outAIfStmt)
-		ln = node.getKwThen().getLine()
+		ln = node.getThen().getLine()
 		tp = self.typeMap[node.getExpr()]
 		if tp != Type.BOOLEAN:
 			G.errors().semantic().add("if statement must evaluate on type " +
@@ -415,7 +424,7 @@ class SemanticChecker(DepthFirstAdapter):
 		   Error Conditions:
 		    * expr type != Type.BOOLEAN'''
 		self.printFunc(self.outALoopStmt)
-		ln = node.getKwWhile().getLine()
+		ln = node.getWhile().getLine()
 		tp = self.typeMap[node.getExpr()]
 		if tp != Type.BOOLEAN:
 			G.errors().semantic().add("loops must evaluate on type " +
@@ -436,8 +445,8 @@ class SemanticChecker(DepthFirstAdapter):
 		'''Takes any binary expression and returns a tuple of...
 		   (lhs node, rhs node, lhs type, rhs type)
 		   It assumes that the lhs == node.getE1() and rhs == node.getE2()'''
-		lhs = node.getE1()
-		rhs = node.getE2()
+		lhs = node.getLeft()
+		rhs = node.getRight()
 		tp_lhs = self.typeMap[lhs]
 		tp_rhs = self.typeMap[rhs]
 		return (lhs, rhs, tp_lhs, tp_rhs)
@@ -453,17 +462,18 @@ class SemanticChecker(DepthFirstAdapter):
 				return tp_lhs
 		return Type.NONE
 	
-	def outAIdExpr9(self, node):
-		'''Manage 'id' expr9 expression
+	def outAIdExpr(self, node):
+		'''Manage 'id' expression
 		   Error Conditions
 		    * Undefined id
 		    * HACK MiniOodle 'out' and 'in' are allowed'''
-		self.printFunc(self.outAIdExpr9, node)
+		self.printFunc(self.outAIdExpr, node)
 		nm = node.getId().getText()
 		sym = G.symTab().lookup(nm)
 		ln = node.getId().getLine()
 		
 		tp = Type.NONE
+		#HACK - MiniOodle classes of 'in' and 'out'
 		if nm == 'out':
 			pass
 		elif nm == 'in':
@@ -522,45 +532,38 @@ class SemanticChecker(DepthFirstAdapter):
 		G.errors().semantic().addUnsupportedFeature('me', ln)
 		self.typeMap[node] = Type.NONE
 
-	def outANewExpr9(self, node):
-		'''Manage 'new' expr9 expression
+	def outANewExpr(self, node):
+		'''Manage 'new' expression
 		   Error Conditions
 		    * HACK MiniOodle: new is unsupported'''
-		self.printFunc(self.outANewExpr9, node)
+		self.printFunc(self.outANewExpr, node)
 		ln = node.getKwNew().getLine()
 		G.errors().semantic().addUnsupportedFeature('new', ln)
 		self.typeMap[node] = Type.NONE
 
-	def outAParExpr9(self, node):
-		'''Manage parentheses expr9 expression
-		   Error Conditions
-		    * NONE'''
-		self.printFunc(self.outAParExpr9, node)
-		self.typeMap[node] = self.typeMap[node.getExpr()]
-
-	def outAArrayExpr9(self, node):
-		'''Manage 'array' expr9 expression
+	def outAArrayExpr(self, node):
+		'''Manage 'array' expression
 		   Error Conditions
 		    * HACK MiniOodle: me is unsupported'''
-		self.printFunc(self.outAMeExpr9, node)
+		self.printFunc(self.outAArrayExpr, node)
 		ln = node.getId().getLine()
 		G.errors().semantic().addUnsupportedFeature('array', ln)
 		self.typeMap[node] = Type.NONE
 
-	def outACallExpr9(self, node):
-		'''Manage 'call' expr9 expression
+	def outACallExpr(self, node):
+		'''Manage 'call' expression
 		   Error Conditions
 		    * NONE'''
-		self.printFunc(self.outACallExpr9, node)
+		self.printFunc(self.outACallExpr, node)
 		self.typeMap[node] = self.typeMap[node.getCall()]
 
-	def outAPosExpr8(self, node):
-		'''Manage 'pos' expr8 expression
+	def outAPosExpr(self, node):
+		'''Manage 'pos' expression
 		   Error Conditions
 		    * expression type != Type.INT'''
-		self.printFunc(self.outAPosExpr8, node)
-		ln = node.getOpPlus().getLine()
-		tp = self.typeMap[node.getExpr9()]
+		self.printFunc(self.outAPosExpr, node)
+		ln = node.getOp().getLine()
+		tp = self.typeMap[node.getExpr()]
 		tp_ret = Type.INT
 		if tp != Type.INT:
 			tp_ret = Type.NONE
@@ -569,13 +572,13 @@ class SemanticChecker(DepthFirstAdapter):
 									  Type.INT.name(), ln)
 		self.typeMap[node] = tp_ret
 
-	def outANegExpr8(self, node):
-		'''Manage 'neg' expr8 expression
+	def outANegExpr(self, node):
+		'''Manage 'neg' expression
 		   Error Conditions
 		    * expression type != Type.INT'''
-		self.printFunc(self.outANegExpr8, node)
-		ln = node.getOpMinus().getLine()
-		tp = self.typeMap[node.getExpr9()]
+		self.printFunc(self.outANegExpr, node)
+		ln = node.getOp().getLine()
+		tp = self.typeMap[node.getExpr()]
 		tp_ret = Type.INT
 		if tp != Type.INT:
 			tp_ret = Type.NONE
@@ -584,13 +587,13 @@ class SemanticChecker(DepthFirstAdapter):
 									  Type.INT.name(), ln)
 		self.typeMap[node] = tp_ret
 
-	def outANotExpr8(self, node):
-		'''Manage 'not' expr8 expression
+	def outANotExpr(self, node):
+		'''Manage 'not' expression
 		   Error Conditions
 		    * expression type not boolean'''
-		self.printFunc(self.outANotExpr8, node)
-		ln = node.getKwNot().getLine()
-		tp = self.typeMap[node.getExpr9()]
+		self.printFunc(self.outANotExpr, node)
+		ln = node.getOp().getLine()
+		tp = self.typeMap[node.getExpr()]
 		tp_ret = Type.BOOLEAN
 		if tp != Type.BOOLEAN:
 			tp_ret = Type.NONE
@@ -599,19 +602,12 @@ class SemanticChecker(DepthFirstAdapter):
 									  Type.BOOLEAN.name(), ln)
 		self.typeMap[node] = tp_ret
 
-	def outAOtherExpr8(self, node):
-		'''Manage 'other' expr8 expression
-		   Error Conditions
-		    * NONE'''
-		self.printFunc(self.outAOtherExpr8, node)
-		self.typeMap[node] = self.typeMap[node.getExpr9()]
-
-	def outAMultExpr5(self, node):
-		'''Manage 'mult' expr4 expression
+	def outAMultExpr(self, node):
+		'''Manage 'mult' expression
 		   Error Conditions
 		    * lhs type != Type.INT and rhs type != Type.INT'''
-		self.printFunc(self.outAMultExpr5, node)
-		ln = node.getOpMult().getLine()
+		self.printFunc(self.outAMultExpr, node)
+		ln = node.getOp().getLine()
 		(lhs, rhs, tp_lhs, tp_rhs) = self.readBinExpr(node)
 		
 		#operand type must be INT
@@ -624,12 +620,12 @@ class SemanticChecker(DepthFirstAdapter):
 									  Type.INT.name(), ln)
 		self.typeMap[node] = tp_ret
 
-	def outADivExpr5(self, node):
-		'''Manage 'div' expr4 expression
+	def outADivExpr(self, node):
+		'''Manage 'div' expression
 		   Error Conditions
 		    * lhs type != Type.INT and rhs type != Type.INT'''
-		self.printFunc(self.outAMultExpr5, node)
-		ln = node.getOpDiv().getLine()
+		self.printFunc(self.outAMultExpr, node)
+		ln = node.getOp().getLine()
 		(lhs, rhs, tp_lhs, tp_rhs) = self.readBinExpr(node)
 		
 		#operand type must be INT
@@ -642,19 +638,12 @@ class SemanticChecker(DepthFirstAdapter):
 									  Type.INT.name(), ln)
 		self.typeMap[node] = tp_ret
 
-	def outAOtherExpr5(self, node):
-		'''Manage 'other' expr5 expression
-		   Error Conditions
-		    * NONE'''
-		self.printFunc(self.outAOtherExpr5, node)
-		self.typeMap[node] = self.typeMap[node.getExpr8()]
-
-	def outAAddExpr4(self, node):
-		'''Manage 'add' expr4 expression
+	def outAAddExpr(self, node):
+		'''Manage 'add' expression
 		   Error Conditions
 		    * lhs type != Type.INT and rhs type != Type.INT'''
-		self.printFunc(self.outAAddExpr4, node)
-		ln = node.getOpPlus().getLine()
+		self.printFunc(self.outAAddExpr, node)
+		ln = node.getOp().getLine()
 		(lhs, rhs, tp_lhs, tp_rhs) = self.readBinExpr(node)
 		
 		#operand type must be INT
@@ -667,12 +656,12 @@ class SemanticChecker(DepthFirstAdapter):
 									  Type.INT.name(), ln)
 		self.typeMap[node] = tp_ret
 	
-	def outASubExpr4(self, node):
+	def outASubExpr(self, node):
 		'''Manage 'sub' expr4 expression
 		   Error Conditions
 		    * lhs type != Type.INT and rhs type != Type.INT'''
-		self.printFunc(self.outASubExpr4, node)
-		ln = node.getOpMinus().getLine()
+		self.printFunc(self.outASubExpr, node)
+		ln = node.getOp().getLine()
 		(lhs, rhs, tp_lhs, tp_rhs) = self.readBinExpr(node)
 		
 		#operand type must be INT
@@ -684,21 +673,13 @@ class SemanticChecker(DepthFirstAdapter):
 									  "' subtraction requires 2 operands of type " +
 									  Type.INT.name(), ln)
 		self.typeMap[node] = tp_ret
-		
-	
-	def outAOtherExpr4(self, node):
-		'''Manage 'other' expr4 expression
-		   Error Conditions
-		    * NONE'''
-		self.printFunc(self.outAOtherExpr4, node)
-		self.typeMap[node] = self.typeMap[node.getExpr5()]
 
-	def outAConcatExpr3(self, node):
-		'''Manage 'concat' expr3 expression
+	def outAConcatExpr(self, node):
+		'''Manage 'concat' expression
 		   Error Conditions
 		    * lhs type != Type.STRING and rhs type != Type.STRING'''
-		self.printFunc(self.outAConcatExpr3, node)
-		ln = node.getOpConcat().getLine()
+		self.printFunc(self.outAConcatExpr, node)
+		ln = node.getOp().getLine()
 		(lhs, rhs, tp_lhs, tp_rhs) = self.readBinExpr(node)
 		
 		#operand type must be INT
@@ -711,21 +692,14 @@ class SemanticChecker(DepthFirstAdapter):
 									  Type.STRING.name(), ln)
 		self.typeMap[node] = tp_ret
 
-	def outAOtherExpr3(self, node):
-		'''Manage 'other' expr3 expression
-		   Error Conditions
-		    * NONE'''
-		self.printFunc(self.outAOtherExpr3, node)
-		self.typeMap[node] = self.typeMap[node.getExpr4()]
-
-	def outALteExpr2(self, node):
-		'''Manage 'less than or equal' expr2 expression
+	def outALteExpr(self, node):
+		'''Manage 'less than or equal' expression
 		   Error Conditions
 		    * lhs type != rhs type
 		    * lhs_type != (Type.INT | Type.STRING)
 		    * rhs_type != (Type.INT | Type.STRING)'''
-		self.printFunc(self.outALteExpr2)
-		ln = node.getOpLtEq().getLine()
+		self.printFunc(self.outALteExpr)
+		ln = node.getOp().getLine()
 		(lhs, rhs, tp_lhs, tp_rhs) = self.readBinExpr(node)
 		
 		#operand types must be INT xor STRING
@@ -741,14 +715,14 @@ class SemanticChecker(DepthFirstAdapter):
 			tp_ret = Type.BOOLEAN
 		self.typeMap[node] = tp_ret
 
-	def outAGteExpr2(self, node):
-		'''Manage 'greater than or equal' expr2 expression
+	def outAGteExpr(self, node):
+		'''Manage 'greater than or equal' expression
 		   Error Conditions
 		    * lhs type != rhs type
 		    * lhs_type != (Type.INT | Type.STRING)
 		    * rhs_type != (Type.INT | Type.STRING)'''
-		self.printFunc(self.outAGteExpr2, node)
-		ln = node.getOpGtEq().getLine()
+		self.printFunc(self.outAGteExpr, node)
+		ln = node.getOp().getLine()
 		(lhs, rhs, tp_lhs, tp_rhs) = self.readBinExpr(node)
 		
 		#operand types must be INT xor STRING
@@ -764,14 +738,14 @@ class SemanticChecker(DepthFirstAdapter):
 			tp_ret = Type.BOOLEAN
 		self.typeMap[node] = tp_ret
 
-	def outALtExpr2(self, node):
-		'''Manage 'Less than' expr2 expression
+	def outALtExpr(self, node):
+		'''Manage 'Less than' expression
 		   Error Conditions
 		    * lhs type != rhs type
 		    * lhs_type != (Type.INT | Type.STRING)
 		    * rhs_type != (Type.INT | Type.STRING)'''
-		self.printFunc(self.outALtExpr2, node)
-		ln = node.getOpLt().getLine()
+		self.printFunc(self.outALtExpr, node)
+		ln = node.getOp().getLine()
 		(lhs, rhs, tp_lhs, tp_rhs) = self.readBinExpr(node)
 		
 		#operand types must be INT xor STRING
@@ -787,14 +761,14 @@ class SemanticChecker(DepthFirstAdapter):
 			tp_ret = Type.BOOLEAN
 		self.typeMap[node] = tp_ret
 
-	def outAGtExpr2(self, node):
-		'''Manage 'greater than' expr2 expression
+	def outAGtExpr(self, node):
+		'''Manage 'greater than' expression
 		   Error Conditions
 		    * lhs type != rhs type
 		    * lhs_type != (Type.INT | Type.STRING)
 		    * rhs_type != (Type.INT | Type.STRING)'''
-		self.printFunc(self.outAGtExpr2, node)
-		ln = node.getOpGt().getLine()
+		self.printFunc(self.outAGtExpr, node)
+		ln = node.getOp().getLine()
 		(lhs, rhs, tp_lhs, tp_rhs) = self.readBinExpr(node)
 		
 		#operand types must be INT xor STRING
@@ -810,14 +784,14 @@ class SemanticChecker(DepthFirstAdapter):
 			tp_ret = Type.BOOLEAN
 		self.typeMap[node] = tp_ret
 
-	def outAEqExpr2(self, node):
-		'''Manage 'equal to' expr2 expression
+	def outAEqExpr(self, node):
+		'''Manage 'equal to' expression
 		   Error Conditions
 		    * lhs type != rhs type
 		    * lhs_type != (Type.INT | Type.STRING | Type.BOOLEAN)
 		    * rhs_type != (Type.INT | Type.STRING | Type.BOOLEAN)'''
-		self.printFunc(self.outAEqExpr2, node)
-		ln = node.getOpEq().getLine()
+		self.printFunc(self.outAEqExpr, node)
+		ln = node.getOp().getLine()
 		(lhs, rhs, tp_lhs, tp_rhs) = self.readBinExpr(node)
 		
 		#operand types must be INT xor STRING
@@ -834,19 +808,12 @@ class SemanticChecker(DepthFirstAdapter):
 			tp_ret = Type.BOOLEAN
 		self.typeMap[node] = tp_ret
 
-	def outAOtherExpr2(self, node):
-		'''Manage 'other' expr2 expression
-		   Error Conditions
-		    * NONE'''
-		self.printFunc(self.outAOtherExpr2, node)
-		self.typeMap[node] = self.typeMap[node.getExpr3()]
-	
-	def outAAndExpr1(self, node):
-		'''Manage 'and' expr1 expression
+	def outAAndExpr(self, node):
+		'''Manage 'and' expression
 		   Error Conditions
 		    * lhs type != Type.BOOLEAN and rhs type != Type.BOOLEAN'''
-		self.printFunc(self.outAAndExpr1, node)
-		ln = node.getKwAnd().getLine()
+		self.printFunc(self.outAAndExpr, node)
+		ln = node.getOp().getLine()
 		(lhs, rhs, tp_lhs, tp_rhs) = self.readBinExpr(node)
 		
 		#operand type must be BOOLEAN
@@ -859,20 +826,12 @@ class SemanticChecker(DepthFirstAdapter):
 									  Type.BOOLEAN.name(), ln)
 		self.typeMap[node] = tp_ret
 
-
-	def outAOtherExpr1(self, node):
-		'''Manage 'other' expr1 expression
-		   Error Conditions
-		    * NONE'''
-		self.printFunc(self.outAOtherExpr1, node)
-		self.typeMap[node] = self.typeMap[node.getExpr2()]
-	
 	def outAOrExpr(self, node):
-		'''Manage 'or' expr expression
+		'''Manage 'or' expression
 		   Error Conditions
-		    * lhs type != Type.BOOLEAN and rhs type != Type.BOOLENA'''
-		self.printFunc(self.outAAndExpr1, node)
-		ln = node.getKwOr().getLine()
+		    * lhs type != Type.BOOLEAN and rhs type != Type.BOOLEAN'''
+		self.printFunc(self.outAOrExpr, node)
+		ln = node.getOp().getLine()
 		(lhs, rhs, tp_lhs, tp_rhs) = self.readBinExpr(node)
 		
 		#operand type must be BOOLEAN
@@ -884,31 +843,6 @@ class SemanticChecker(DepthFirstAdapter):
 									  "' or-logic requires 2 operands of type " +
 									  Type.BOOLEAN.name(), ln)
 		self.typeMap[node] = tp_ret
-
-	def outAOtherExpr(self, node):
-		'''Manage 'other' expr expression
-		   Error Conditions
-		    * NONE'''
-		self.printFunc(self.outAOtherExpr, node)
-		self.typeMap[node] = self.typeMap[node.getExpr1()]
-
-
-	def outAExprList(self, node):
-		'''Manage 'expr_list'
-		   Error Conditions
-		    * NONE
-		   Special Features
-		    * puts the entire list into the typeMap'''
-		self.printFunc(self.outAExprList, node)
-		ls = []
-		expr = node.getExpr()
-		expr_tail = node.getExprListTail()
-		if expr != None:
-			ls.append(self.typeMap[expr])
-		if len(expr_tail) > 0:
-			for i in expr_tail:
-				ls.append(self.typeMap[i.getExpr()])
-		self.typeMap[node] = ls
 
 	###########################################################################
 	## MISCELLANEOUS STUFF                                                   ##
@@ -928,9 +862,7 @@ class SemanticChecker(DepthFirstAdapter):
 		ln = node.getId().getLine()
 		nm = node.getId().getText()
 		sym = G.symTab().lookup(nm)
-		ls_args = []
-		if node.getExprList() != None:
-			ls_args = self.typeMap[node.getExprList()]
+		ls_args = [self.typeMap[a] for a in node.getArgs()]
 
 		tp_ret = Type.NONE
 		#id does not exist or is not a method id

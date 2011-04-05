@@ -200,14 +200,14 @@ Productions
 	    ;
 
 	stmt                                                   {-> stmt}
-	    = {assign} T.id arr_expr_list? T.op_assign expr    {-> New stmt.assign(T.id, [arr_expr_list.expr], expr)}
+	    = {assign} T.id arr_expr_list? T.op_assign expr    {-> New stmt.assign(T.id, [arr_expr_list.expr], T.op_assign, expr)}
         | {if} [if1]:T.kw_if expr T.kw_then cr_plus
                stmt_list
                stmt_else?
-               T.kw_end [if2]:T.kw_if                      {-> New stmt.if(expr, [stmt_list.stmt], [stmt_else.stmt])}
+               T.kw_end [if2]:T.kw_if                      {-> New stmt.if(expr, T.kw_then, [stmt_list.stmt], [stmt_else.stmt])}
         | {loop} [lp1]:T.kw_loop T.kw_while expr cr_plus
                  stmt_list
-                 T.kw_end [lp2]:T.kw_loop                  {-> New stmt.loop(expr, [stmt_list.stmt])}
+                 T.kw_end [lp2]:T.kw_loop                  {-> New stmt.loop(T.kw_while, expr, [stmt_list.stmt])}
         | {call} call                                      {-> New stmt.call(call.call)}
         ;
 
@@ -224,46 +224,46 @@ Productions
         ;
 
 	expr                                           {-> expr}
-	    = {or}    [e1]:expr1 T.kw_or [e2]:expr1    {-> New expr.or(e1.expr, e2.expr)}
+	    = {or}    [e1]:expr1 T.kw_or [e2]:expr1    {-> New expr.or(e1.expr, T.kw_or, e2.expr)}
 	    | {other} expr1                            {-> expr1.expr}
 	    ;
 
 	expr1                                           {-> expr}
-	    = {and}   [e1]:expr1 T.kw_and [e2]:expr2	{-> New expr.and(e1.expr, e2.expr)}
+	    = {and}   [e1]:expr1 T.kw_and [e2]:expr2	{-> New expr.and(e1.expr, T.kw_and, e2.expr)}
 	    | {other} expr2                             {-> expr2.expr}
 	    ;
 
 	expr2                                             {-> expr}
-	    = {lte}   [e1]:expr3 T.op_lt_eq [e2]:expr3    {-> New expr.lte(e1.expr, e2.expr)}
-	    | {gte}   [e1]:expr3 T.op_gt_eq [e2]:expr3    {-> New expr.gte(e1.expr, e2.expr)}
-        | {lt}    [e1]:expr3 T.op_lt    [e2]:expr3    {-> New expr.lt(e1.expr, e2.expr)}
-        | {gt}    [e1]:expr3 T.op_gt    [e2]:expr3    {-> New expr.gt(e1.expr, e2.expr)}
-        | {eq}    [e1]:expr3 T.op_eq    [e2]:expr3    {-> New expr.eq(e1.expr, e2.expr)}
+	    = {lte}   [e1]:expr3 T.op_lt_eq [e2]:expr3    {-> New expr.lte(e1.expr, T.op_lt_eq, e2.expr)}
+	    | {gte}   [e1]:expr3 T.op_gt_eq [e2]:expr3    {-> New expr.gte(e1.expr, T.op_gt_eq, e2.expr)}
+        | {lt}    [e1]:expr3 T.op_lt    [e2]:expr3    {-> New expr.lt(e1.expr, T.op_lt, e2.expr)}
+        | {gt}    [e1]:expr3 T.op_gt    [e2]:expr3    {-> New expr.gt(e1.expr, T.op_gt, e2.expr)}
+        | {eq}    [e1]:expr3 T.op_eq    [e2]:expr3    {-> New expr.eq(e1.expr, T.op_eq, e2.expr)}
         | {other} expr3                               {-> expr3.expr}
         ;
 
 	expr3                                               {-> expr}
-	    = {concat} [e1]:expr3 T.op_concat [e2]:expr4    {-> New expr.concat(e1.expr, e2.expr)}
+	    = {concat} [e1]:expr3 T.op_concat [e2]:expr4    {-> New expr.concat(e1.expr, T.op_concat, e2.expr)}
 	    | {other}  expr4                                {-> expr4.expr}
 	    ;
 
 	expr4                                             {-> expr}
-	    = {add}   [e1]:expr4 T.op_plus  [e2]:expr5    {-> New expr.add(e1.expr, e2.expr)}
-        | {sub}   [e1]:expr4 T.op_minus [e2]:expr5    {-> New expr.sub(e1.expr, e2.expr)}
+	    = {add}   [e1]:expr4 T.op_plus  [e2]:expr5    {-> New expr.add(e1.expr, T.op_plus, e2.expr)}
+        | {sub}   [e1]:expr4 T.op_minus [e2]:expr5    {-> New expr.sub(e1.expr, T.op_minus, e2.expr)}
         | {other} expr5                               {-> expr5.expr}
         ;
 
     expr5                                            {-> expr}
-        = {mult}  [e1]:expr5 T.op_mult [e2]:expr8    {-> New expr.mult(e1.expr, e2.expr)}
-        | {div}   [e1]:expr5 T.op_div [e2]:expr8     {-> New expr.div(e1.expr, e2.expr)}
+        = {mult}  [e1]:expr5 T.op_mult [e2]:expr8    {-> New expr.mult(e1.expr, T.op_mult, e2.expr)}
+        | {div}   [e1]:expr5 T.op_div [e2]:expr8     {-> New expr.div(e1.expr, T.op_div, e2.expr)}
         | {other} expr8                              {-> expr8.expr}
         ;
           
-    expr8                           {-> expr}
-        = {pos}   op_plus expr9     {-> New expr.pos(expr9.expr)}
-        | {neg}   op_minus expr9    {-> New expr.neg(expr9.expr)}
-        | {not}   T.kw_not expr9    {-> New expr.not(expr9.expr)}
-        | {other} expr9             {-> expr9.expr}
+    expr8                             {-> expr}
+        = {pos}   T.op_plus expr9     {-> New expr.pos(T.op_plus, expr9.expr)}
+        | {neg}   T.op_minus expr9    {-> New expr.neg(T.op_minus, expr9.expr)}
+        | {not}   T.kw_not expr9      {-> New expr.not(T.kw_not, expr9.expr)}
+        | {other} expr9               {-> expr9.expr}
         ;
 
 	expr9 {-> expr}
@@ -325,9 +325,9 @@ Abstract Syntax Tree
 	arg = [id]:T.id [tp]:type
 	    ;
 
-	stmt = {assign} [id]:T.id [index]:expr* [expr]:expr
-	     | {if}     [expr]:expr [if_stmts]:stmt* [else_stmts]:stmt*
-	     | {loop}   [expr]:expr [loop_stmts]:stmt*
+	stmt = {assign} [id]:T.id [index]:expr* [op]:T.op_assign [expr]:expr
+	     | {if}     [expr]:expr [then]:T.kw_then [if_stmts]:stmt* [else_stmts]:stmt*
+	     | {loop}   [while]:T.kw_while [expr]:expr [loop_stmts]:stmt*
 	     | {call}   [call]:call
 	     ;
 
@@ -338,21 +338,21 @@ Abstract Syntax Tree
 	     | {array}    [tp]:type [expr]:expr?
 	     ;
 
-	expr = {or}      [left]:expr [right]:expr
-	     | {and}     [left]:expr [right]:expr
-	     | {lte}     [left]:expr [right]:expr
-	     | {gte}     [left]:expr [right]:expr
-	     | {lt}      [left]:expr [right]:expr
-	     | {gt}      [left]:expr [right]:expr
-	     | {eq}      [left]:expr [right]:expr
-	     | {concat}  [left]:expr [right]:expr
-	     | {add}     [left]:expr [right]:expr
-	     | {sub}     [left]:expr [right]:expr
-	     | {mult}    [left]:expr [right]:expr
-	     | {div}     [left]:expr [right]:expr
-	     | {pos}     [expr]:expr
-	     | {neg}     [expr]:expr
-	     | {not}     [expr]:expr
+	expr = {or}      [left]:expr [op]:T.kw_or     [right]:expr
+	     | {and}     [left]:expr [op]:T.kw_and    [right]:expr
+	     | {lte}     [left]:expr [op]:T.op_lt_eq  [right]:expr
+	     | {gte}     [left]:expr [op]:T.op_gt_eq  [right]:expr
+	     | {lt}      [left]:expr [op]:T.op_lt     [right]:expr
+	     | {gt}      [left]:expr [op]:T.op_gt     [right]:expr
+	     | {eq}      [left]:expr [op]:T.op_eq     [right]:expr
+	     | {concat}  [left]:expr [op]:T.op_concat [right]:expr
+	     | {add}     [left]:expr [op]:T.op_plus   [right]:expr
+	     | {sub}     [left]:expr [op]:T.op_minus  [right]:expr
+	     | {mult}    [left]:expr [op]:T.op_mult   [right]:expr
+	     | {div}     [left]:expr [op]:T.op_div    [right]:expr
+	     | {pos}     [op]:T.op_plus  [expr]:expr
+	     | {neg}     [op]:T.op_minus [expr]:expr
+	     | {not}     [op]:T.kw_not   [expr]:expr
 	     | {id}      [id]:T.id
 	     | {str}     T.str_lit
 	     | {int}     T.int_lit
