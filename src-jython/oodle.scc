@@ -220,7 +220,7 @@ Productions
         | {string} T.kw_string                                {-> New type.string(T.kw_string)}
         | {bool} T.kw_boolean                                 {-> New type.bool(T.kw_boolean)}
         | {udt} T.id                                          {-> New type.udt(T.id)}
-        | {array} type T.misc_l_brack expr? T.misc_r_brack    {-> New type.array(type, expr)}
+        | {array} type T.misc_l_brack expr? T.misc_r_brack    {-> New type.array(type, T.misc_l_brack, expr, T.misc_r_brack)}
         ;
 
 	expr                                           {-> expr}
@@ -331,11 +331,11 @@ Abstract Syntax Tree
 	     | {call}   [call]:call
 	     ;
 
-	type = {int}      T.kw_int
-	     | {string}   T.kw_string
-	     | {bool}     T.kw_boolean
-	     | {udt}      [id]:T.id
-	     | {array}    [tp]:type [expr]:expr?
+	type = {int}      [tp]:T.kw_int
+	     | {string}   [tp]:T.kw_string
+	     | {bool}     [tp]:T.kw_boolean
+	     | {udt}      [tp]:T.id
+	     | {array}    [tp]:type [l_brack]:T.misc_l_brack [expr]:expr? [r_brack]:T.misc_r_brack
 	     ;
 
 	expr = {or}      [left]:expr [op]:T.kw_or     [right]:expr
@@ -354,12 +354,12 @@ Abstract Syntax Tree
 	     | {neg}     [op]:T.op_minus [expr]:expr
 	     | {not}     [op]:T.kw_not   [expr]:expr
 	     | {id}      [id]:T.id
-	     | {str}     T.str_lit
-	     | {int}     T.int_lit
-	     | {true}    T.kw_true
-	     | {false}   T.kw_false
-	     | {null}    T.kw_null
-	     | {me}      T.kw_me
+	     | {str}     [value]:T.str_lit
+	     | {int}     [value]:T.int_lit
+	     | {true}    [value]:T.kw_true
+	     | {false}   [value]:T.kw_false
+	     | {null}    [value]:T.kw_null
+	     | {me}      [value]:T.kw_me
 	     | {new}     [tp]:type
 	     | {array}   [id]:T.id [index]:expr*
 	     | {call}    [call]:call

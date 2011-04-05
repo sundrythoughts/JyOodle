@@ -408,7 +408,7 @@ class CodeGenx86(DepthFirstAdapter):
 		   Types
 		    * Type.INT'''
 		self.printFunc(self.outAIntExpr, node)
-		imm = '$' + node.getIntLit().getText()
+		imm = '$' + node.getValue().getText()
 		self.writeAsmText('pushl ' + imm)
 
 	def outATrueExpr(self, node):

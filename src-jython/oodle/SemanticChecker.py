@@ -261,7 +261,7 @@ class SemanticChecker(DepthFirstAdapter):
 		'''Unsupported Feature for MiniOodle'''
 		self.printFunc(self.outAStringType, node)
 		self.typeMap[node] = Type.STRING      #store this nodes type
-		ln = node.getKwString().getLine() #get the line number
+		ln = node.getTp().getLine() #get the line number
 		G.errors().semantic().addUnsupportedFeature('string', ln)
 	
 	def outAUdtType(self, node):
@@ -270,8 +270,8 @@ class SemanticChecker(DepthFirstAdapter):
 		    * Unsupported Feature'''
 		self.printFunc(self.outAUdtType, node)
 		err = False
-		nm = node.getId().getText()
-		ln = node.getId().getLine()
+		nm = node.getTp().getText()
+		ln = node.getTp().getLine()
 
 		G.errors().semantic().addUnsupportedFeature('user-defined type', ln)
 		
@@ -288,7 +288,7 @@ class SemanticChecker(DepthFirstAdapter):
 		   Error Conditions:
 		    * Unsupported Feature'''
 		self.printFunc(self.outAArrayType, node)
-		ln = node.getMiscLBrack().getLine()
+		ln = node.getLBrack().getLine()
 		G.errors().semantic().addUnsupportedFeature('array', ln)
 		self.typeMap[node] = Type.NONE
 
@@ -417,7 +417,6 @@ class SemanticChecker(DepthFirstAdapter):
 		   Error Conditions:
 		    * '''
 		self.printFunc(self.outAStmtElse, node)
-		
 
 	def outALoopStmt(self, node):
 		'''Manage 'loop while' statement
@@ -429,7 +428,7 @@ class SemanticChecker(DepthFirstAdapter):
 		if tp != Type.BOOLEAN:
 			G.errors().semantic().add("loops must evaluate on type " +
 									  Type.BOOLEAN.name(), ln)
-	
+
 	def outACallStmt(self, node):
 		'''Manage 'call' statement
 		   Error Conditions:
@@ -437,7 +436,6 @@ class SemanticChecker(DepthFirstAdapter):
 		self.printFunc(self.outACallStmt, node)
 		self.typeMap[node] = self.typeMap[node.getCall()]
 
-	
 	###########################################################################
 	## EXPRESSION STUFF                                                      ##
 	###########################################################################
@@ -491,7 +489,7 @@ class SemanticChecker(DepthFirstAdapter):
 		   Error Conditions
 		    * HACK MiniOodle: string is unsupported'''
 		self.printFunc(self.outAStrExpr, node)
-		ln = node.getStrLit().getLine()
+		ln = node.getValue().getLine()
 		G.errors().semantic().addUnsupportedFeature("string", ln)
 		self.typeMap[node] = Type.STRING
 
@@ -847,10 +845,6 @@ class SemanticChecker(DepthFirstAdapter):
 	###########################################################################
 	## MISCELLANEOUS STUFF                                                   ##
 	###########################################################################
-	def outAObjExpr(self, node):
-		''''''
-		self.printFunc(self.outAObjExpr, node)
-	
 	def outACall(self, node):
 		'''Manage a method 'call'
 		   Error Conditions
