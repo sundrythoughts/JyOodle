@@ -133,7 +133,7 @@ class CodeGenx86(DepthFirstAdapter):
 		f.flush()
 		
 		#compile asm with stdlib.c
-		proc = subprocess.Popen(['gcc', '-m32', '-o', bin_fn, 'stdlib.c', asm_fn])
+		proc = subprocess.Popen(['gcc', '-g', '-m32', '-o', bin_fn, 'stdlib.c', asm_fn])
 		proc.wait()
 		if proc.stderr:
 			print '------------------'
@@ -199,10 +199,24 @@ class CodeGenx86(DepthFirstAdapter):
 	def outAMethodSig(self, node):
 		''''''
 		self.printFunc(self.outAMethodSig, node)
+		mem = -4
+		vars = node.parent().getVars()
+		if vars != None:
+			mem = G.symMap()[vars[-1]].decl().offset()
+		self.writeAsmText('pushl %ebp')
+		self.writeAsmText('movl %esp, %ebp')
+		self.writeAsmText('addl $(' + str(mem) + '), %esp')
+
+	def inAMethod(self, node):
+		''''''
+		self.printFunc(self.inAMethod)
 
 	def outAMethod(self, node):
 		''''''
 		self.printFunc(self.outAMethod)
+		self.writeAsmText('movl -4(%ebp), %eax')  # put return value in %eax
+		self.writeAsmText('movl %ebp, %esp')      # delete local variables
+		self.writeAsmText('popl %ebp')            # restore old %ebp
 		self.writeAsmText('ret')
 	
 	def outAArgList(self, node):
@@ -318,11 +332,16 @@ class CodeGenx86(DepthFirstAdapter):
 			* NONE'''
 		self.printFunc(self.outAAssignStmt, node)
 		nm = '_' + node.getId().getText()
+		
+		#get Declaration if it is in the SymbolTable
 		decl = None
 		if node in G.symMap():
 			decl = G.symMap()[node].decl()
+
+		#local variable
 		if isinstance(decl, LocalVarDecl):
 			self.writeAsmText('popl ' + str(decl.offset()) + '(%ebp)')
+		#variable
 		else:
 			self.writeAsmText('popl ' + nm)
 
@@ -403,11 +422,16 @@ class CodeGenx86(DepthFirstAdapter):
 		    * a variable name'''
 		self.printFunc(self.outAIdExpr, node)
 		nm = self.prefix() + node.getId().getText()
+		
+		#get the Declaration if it is in the SymbolMap
 		decl = None
 		if node in G.symMap():
 			decl = G.symMap()[node].decl()
+		
+		#local variable
 		if isinstance(decl, LocalVarDecl):
 			self.writeAsmText('pushl ' + str(decl.offset()) + '(%ebp)')
+		#variable
 		else:
 			self.writeAsmText('pushl ' + nm)
 

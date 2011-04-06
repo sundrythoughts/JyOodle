@@ -11,9 +11,9 @@ class Main is
 		i1 := 3
 		i2 := i1 + 13
 		b1 := false
-		x := i2
+		x := x + i2
 		out.writeint(i1)
-		out.writeint(i2 + 2)
-		out.writeint(x + 5)
+		out.writeint(i2)
+		out.writeint(x)
 	end start
 end Main
