@@ -108,3 +108,22 @@ class VarDecl(Declaration):
 	def setVarType(self, t):
 		'''set the variable Type'''
 		self.m_type = t
+
+class LocalVarDecl(VarDecl):
+	''''''
+	def __init__(self, t):
+		''''''
+		VarDecl.__init__(self, t)
+		self.m_offset = 0
+
+	def __str__(self):
+		'''Get LocalVarDecl as string'''
+		return 'local var: ' + self.m_type.name()
+
+	def offset(self):
+		'''get the offset of the variable if it is local'''
+		return self.m_offset
+
+	def setOffset(self, o):
+		'''set the offset of the variable if it is local'''
+		self.m_offset = o

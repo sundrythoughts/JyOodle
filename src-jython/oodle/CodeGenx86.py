@@ -318,7 +318,13 @@ class CodeGenx86(DepthFirstAdapter):
 			* NONE'''
 		self.printFunc(self.outAAssignStmt, node)
 		nm = '_' + node.getId().getText()
-		self.writeAsmText('popl ' + nm)
+		decl = None
+		if node in G.symMap():
+			decl = G.symMap()[node].decl()
+		if isinstance(decl, LocalVarDecl):
+			self.writeAsmText('popl ' + str(decl.offset()) + '(%ebp)')
+		else:
+			self.writeAsmText('popl ' + nm)
 
 	def caseAIfStmt(self, node):
 		'''Generate 'if-else' code'''
@@ -397,7 +403,13 @@ class CodeGenx86(DepthFirstAdapter):
 		    * a variable name'''
 		self.printFunc(self.outAIdExpr, node)
 		nm = self.prefix() + node.getId().getText()
-		self.writeAsmText('pushl ' + nm)
+		decl = None
+		if node in G.symMap():
+			decl = G.symMap()[node].decl()
+		if isinstance(decl, LocalVarDecl):
+			self.writeAsmText('pushl ' + str(decl.offset()) + '(%ebp)')
+		else:
+			self.writeAsmText('pushl ' + nm)
 
 	def outAStrExpr(self, node):
 		''''''

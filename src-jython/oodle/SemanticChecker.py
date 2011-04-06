@@ -26,8 +26,8 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #===============================================================================
 
+import cps450
 from cps450.oodle.analysis import DepthFirstAdapter
-from cps450.oodle.node import Node
 from oodle.G import G
 from oodle.Declarations import *
 from oodle import Type
@@ -39,10 +39,10 @@ class SemanticChecker(DepthFirstAdapter):
 		self.typeMap = dict() #stores the Type of each node
 		
 		self.hack_has_class = False #HACK for MiniOodle
-		self.valid_scope = False #help determine whether a scope is valid or not
+		self.valid_scope = False    #help determine whether a scope is valid or not
 	
 	###########################################################################
-	## Methods to help with debuggin                                         ##
+	## Methods to help with debugging                                        ##
 	###########################################################################
 	def printFunc(self, f, node=None):
 		'''print the name of the node function and its node string
@@ -99,10 +99,17 @@ class SemanticChecker(DepthFirstAdapter):
 		vars = node.getVars()
 		
 
-		#HACK - local variable and local variable init are unsupported in MiniOodle
+		#setup local variable offsets on the stack
+		sloc = -8
 		for v in vars:
+			nm = v.getId().getText()     #get the variable name
+			sym = G.symTab().lookup(nm)  #get the symbol associated with the name
+			sym.decl().setOffset(sloc)          #set the stack offset of the variable
+			G.symMap()[v] = sym          #add the symbol to the SymbolMap
+			sloc -= 4                    #next local variable offset 
+			
 			ln = v.getId().getLine() #line number
-			G.errors().semantic().addUnsupportedFeature("local variable", ln)
+			#HACK - local variable init are unsupported in MiniOodle
 			if v.getExpr() != None:
 				G.errors().semantic().addUnsupportedFeature("local variable initialization", ln)
 
@@ -173,7 +180,7 @@ class SemanticChecker(DepthFirstAdapter):
 
 		tp = self.typeMap[node.getTp()] #get the variable type from the child node
 		self.typeMap[node] = tp              #store this nodes type
-		G.symTab().push(nm, VarDecl(tp))   #add the (node id, type) to the SymbolTable
+		G.symTab().push(nm, LocalVarDecl(tp))   #add the (node id, type) to the SymbolTable
 	
 	def outAMethodVar(self, node):
 		'''Manage local method variables
@@ -227,7 +234,10 @@ class SemanticChecker(DepthFirstAdapter):
 
 		#add name to SymbolTable (even if an error occurred)
 		self.typeMap[node] = tp_decl              #store this nodes type
-		G.symTab().push(nm, VarDecl(tp_decl))   #add the (node id, type) to the SymbolTable
+		if isinstance(node.parent(), cps450.oodle.node.AMethod): #local var
+			G.symTab().push(nm, LocalVarDecl(tp_decl))
+		else: #instance var
+			G.symTab().push(nm, VarDecl(tp_decl))   #add the (node id, type) to the SymbolTable
 	
 #===============================================================================
 #	def outAVarAssign(self, node):
@@ -388,6 +398,10 @@ class SemanticChecker(DepthFirstAdapter):
 		#id does not exist or is not a variable or method
 		if sym == None or not isinstance(sym.decl(), (VarDecl, MethodDecl)):
 			G.errors().semantic().add("'" + nm + "' does not exist", ln)
+		#id exists and is a local variable
+		elif isinstance(sym.decl(), LocalVarDecl):
+			G.symMap()[node] = sym
+			tp_lhs = sym.decl().varType()
 		#id exists and is a variable
 		elif isinstance(sym.decl(), VarDecl):
 			tp_lhs = sym.decl().varType()
@@ -479,6 +493,9 @@ class SemanticChecker(DepthFirstAdapter):
 		#id is undefined
 		elif sym == None:
 			G.errors().semantic().add("undefined variable '" + nm + "'", ln)
+		elif isinstance(sym.decl(), LocalVarDecl):
+			G.symMap()[node] = sym
+			tp = sym.decl().varType()
 		else:
 			tp = sym.decl().varType()
 		

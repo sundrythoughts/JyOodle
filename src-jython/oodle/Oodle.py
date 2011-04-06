@@ -55,7 +55,7 @@ def main():
 	G.symTab().push('writeint', oodle.Declarations.MethodDecl([oodle.Type.INT], oodle.Type.VOID))
 	
 	#FIXME - debug printing
-	#G.options().setPrintDebug(True)
+	G.options().setPrintDebug(True)
 
 	G.options().parseArgs(sys.argv[1:])
 
