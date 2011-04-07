@@ -652,7 +652,7 @@ class CodeGenx86(DepthFirstAdapter):
 		#	node.getExpr().apply(self)
 		if node.getId() != None:
 			node.getId().apply(self)
-		copy = node.getArgs()[:]
+		copy = node.getArgs()[::-1]
 		for e in copy:
 			e.apply(self)
 		self.outACall(node)

@@ -128,9 +128,9 @@ class SemanticChecker(DepthFirstAdapter):
 			G.errors().semantic().add("redeclared identifier '" + nm + "'", ln)
 			self.beginScope(False)
 		else:
-			#HACK: if method is something other than start()
-			if nm != 'start':
-				G.errors().semantic().addUnsupportedFeature('method must be named start()', ln)
+			#HACK: MiniOodle - if method is something other than start()
+			#if nm != 'start':
+			#	G.errors().semantic().addUnsupportedFeature('method must be named start()', ln)
 			G.symTab().push(nm, MethodDecl([], Type.VOID))   #add the (node id, type) to the SymbolTable
 			self.beginScope() #make new scope for local variables
 
@@ -158,6 +158,16 @@ class SemanticChecker(DepthFirstAdapter):
 		#set MethodDecl arg types and return type
 		decl.setArgTypes(n_args)
 		decl.setRetType(n_ret)
+		
+		#FIXME: Symbols aren't in the table...why?
+		#add args to the SymbolMap
+		sloc = 8
+		for a in args:
+			nm = a.getId().getText()     #get the arg name
+			sym = G.symTab().lookup(nm)  #get the symbol associated with the name
+			sym.decl().setOffset(sloc)   #set the stack offset of the arg
+			G.symMap()[a] = sym          #add the symbol to the SymbolMap
+			sloc += 4                    #next local variable offset
 	
 	def outAArgList(self, node):
 		''''''
@@ -192,8 +202,7 @@ class SemanticChecker(DepthFirstAdapter):
 			ln = node.getVar().getId().getLine()
 			G.errors().semantic().addUnsupportedFeature('local method variables', ln)
 		self.typeMap[node] = self.typeMap[node.getVar()]
-	
-	
+
 	###########################################################################
 	## GENERIC VARIABLE DECLARATION STUFF (also includes method return type) ##
 	###########################################################################	
@@ -234,7 +243,7 @@ class SemanticChecker(DepthFirstAdapter):
 
 		#add name to SymbolTable (even if an error occurred)
 		self.typeMap[node] = tp_decl              #store this nodes type
-		if isinstance(node.parent(), cps450.oodle.node.AMethod): #local var
+		if isinstance(node.parent(), cps450.oodle.node.AMethod): #local variable
 			G.symTab().push(nm, LocalVarDecl(tp_decl))
 		else: #instance var
 			G.symTab().push(nm, VarDecl(tp_decl))   #add the (node id, type) to the SymbolTable

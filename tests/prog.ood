@@ -3,7 +3,22 @@
 class Main is
 	x: int
 	b: boolean
-	start() : int is
+	
+	func1(a:int ; b:int) is
+		f1: int
+		f2: int
+		f3: int
+	begin
+		f1 := 55
+		f2 := 37
+		f3 := a + b
+		out.writeint(f1)
+		out.writeint(f2)
+		out.writeint(f3)
+		out.writeint(a)
+	end func1
+	
+	start() is
 		i1: int
 		i2: int
 		b1: boolean
@@ -15,5 +30,7 @@ class Main is
 		out.writeint(i1)
 		out.writeint(i2)
 		out.writeint(x)
+		func1(70, 30)
+		func1(32, 8)
 	end start
 end Main
