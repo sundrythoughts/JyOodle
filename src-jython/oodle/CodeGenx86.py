@@ -201,11 +201,13 @@ class CodeGenx86(DepthFirstAdapter):
 		self.printFunc(self.outAMethodSig, node)
 		mem = -4
 		vars = node.parent().getVars()
-		if vars != None:
+		if len(vars) > 0:
 			mem = G.symMap()[vars[-1]].decl().offset()
 		self.writeAsmText('pushl %ebp')
 		self.writeAsmText('movl %esp, %ebp')
 		self.writeAsmText('addl $(' + str(mem) + '), %esp')
+		for v in range(-4, mem - 4, -4):
+			self.writeAsmText('movl $0, ' + str(v) + '(%ebp)')
 
 	def inAMethod(self, node):
 		''''''
@@ -331,18 +333,25 @@ class CodeGenx86(DepthFirstAdapter):
 		   Error Conditions:
 			* NONE'''
 		self.printFunc(self.outAAssignStmt, node)
-		nm = '_' + node.getId().getText()
+		nm = node.getId().getText()
+		sym = G.symTab().lookup(nm)
 		
 		#get Declaration if it is in the SymbolTable
 		decl = None
 		if node in G.symMap():
 			decl = G.symMap()[node].decl()
+		elif sym != None:
+			decl = sym.decl()
 
+		#method return
+		if isinstance(decl, MethodDecl):
+			self.writeAsmText('popl -4(%ebp)')
 		#local variable
-		if isinstance(decl, LocalVarDecl):
+		elif isinstance(decl, LocalVarDecl):
 			self.writeAsmText('popl ' + str(decl.offset()) + '(%ebp)')
 		#variable
 		else:
+			nm = '_' + nm
 			self.writeAsmText('popl ' + nm)
 
 	def caseAIfStmt(self, node):
@@ -652,6 +661,7 @@ class CodeGenx86(DepthFirstAdapter):
 		#	node.getExpr().apply(self)
 		if node.getId() != None:
 			node.getId().apply(self)
+		#reverse the args so that they're pushed from right to left
 		copy = node.getArgs()[::-1]
 		for e in copy:
 			e.apply(self)

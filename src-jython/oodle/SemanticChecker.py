@@ -416,7 +416,7 @@ class SemanticChecker(DepthFirstAdapter):
 			tp_lhs = sym.decl().varType()
 		#id exists and is a method
 		elif isinstance(sym.decl(), MethodDecl):
-			G.errors().semantic().addUnsupportedFeature("method return", ln)
+			#G.errors().semantic().addUnsupportedFeature("method return", ln)
 			tp_lhs = sym.decl().retType()
 		
 		#check for equivalent types

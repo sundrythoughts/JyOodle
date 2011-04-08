@@ -3,8 +3,16 @@
 class Main is
 	x: int
 	b: boolean
-	
-	func1(a:int ; b:int) is
+
+	recursive(lp:int) is
+	begin
+		if (lp >= 0) then
+			out.writeint(lp)
+			recursive(lp - 1)
+		end if
+	end recursive
+
+	func1(a:int ; b:int) : int is
 		f1: int
 		f2: int
 		f3: int
@@ -16,6 +24,7 @@ class Main is
 		out.writeint(f2)
 		out.writeint(f3)
 		out.writeint(a)
+		func1 := 63
 	end func1
 	
 	start() is
@@ -31,6 +40,7 @@ class Main is
 		out.writeint(i2)
 		out.writeint(x)
 		func1(70, 30)
-		func1(32, 8)
+		out.writeint(func1(4,3) + func1(32, 8))
+		recursive(100)
 	end start
 end Main
