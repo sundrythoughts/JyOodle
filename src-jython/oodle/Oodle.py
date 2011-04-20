@@ -32,6 +32,7 @@ from oodle.Lexer import Lexer
 from cps450.oodle.lexer import LexerException
 from cps450.oodle.node import *
 from cps450.oodle.parser import ParserException
+from oodle.TypeMapBuilder import TypeMapBuilder
 from oodle.SemanticChecker import SemanticChecker
 from oodle.CodeGenx86 import CodeGenx86
 import oodle
@@ -51,8 +52,8 @@ def main():
 		return
 
 	#FIXME - HUGE HACK for readint/writeint
-	G.symTab().push('readint', oodle.Declarations.MethodDecl([oodle.Type.VOID], oodle.Type.INT))
-	G.symTab().push('writeint', oodle.Declarations.MethodDecl([oodle.Type.INT], oodle.Type.VOID))
+	#G.symTab().push('readint', oodle.Declarations.MethodDecl([oodle.Type.VOID], oodle.Type.INT))
+	#G.symTab().push('writeint', oodle.Declarations.MethodDecl([oodle.Type.INT], oodle.Type.VOID))
 	
 	#FIXME - debug printing
 	G.options().setPrintDebug(True)
@@ -79,23 +80,36 @@ def main():
 		G.errors().printErrors()
 		return
 
-	#perform semantic checks (new code)
-	print 'Error Checking...'
-	sem_check = SemanticChecker()
-	st_node.apply(sem_check)  #invoke SemanticChecker traversal
-
+	#build the TypeMap for all the input
+	print 'Building Type Map...'
+	tp_map_builder = TypeMapBuilder()
+	st_node.apply(tp_map_builder)  #invoke TypeMapBuilder traversal
+	
+	#FIXME - debug stuff
+	print str(G.typeMap())
 	if G.errors().hasErrors():
 		G.symTab().printTable()
 		G.errors().printErrors()
 		return
 
+	#perform semantic checks (new code)
+	#print 'Error Checking...'
+	#sem_check = SemanticChecker()
+	#st_node.apply(sem_check)  #invoke SemanticChecker traversal
+
+	#if G.errors().hasErrors():
+	#	G.symTab().printTable()
+	#	G.errors().printErrors()
+	#	return
+
 	#FIXME - debug
 	#G.symTab().printTable()
+	#oodle.Type.Type.printTypeMap()
 
-	print 'Compiling...'
-	code_gen = CodeGenx86()
-	st_node.apply(code_gen)
-	code_gen.buildBinary(G.options().generateAssembly())
+	#print 'Compiling...'
+	#code_gen = CodeGenx86()
+	#st_node.apply(code_gen)
+	#code_gen.buildBinary(G.options().generateAssembly())
 	
 	print 'DONE'
 

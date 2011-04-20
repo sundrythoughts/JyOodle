@@ -1,5 +1,12 @@
 ~ This is a comment
 
+class Klass inherits from Main is
+	var: string
+	start(new_var:int) is
+	begin
+	end start
+end Klass
+
 class Main is
 	x: int
 	b: boolean

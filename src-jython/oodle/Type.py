@@ -27,10 +27,13 @@
 #===============================================================================
 
 class Type:
+	st_type_map = dict()
+	
 	''''''
-	def __init__(self, nm):
+	def __init__(self, nm, decl):
 		''''''
 		self.m_name = nm
+		self.m_class_decl = decl
 	
 	def __eq__(self, t):
 		'''Check for Type equivalence'''
@@ -45,13 +48,38 @@ class Type:
 	def name(self):
 		'''Get name of Type'''
 		return self.m_name
+	
+	def decl(self):
+		''''''
+		return self.m_class_decl
 
-ARRAY   = Type('array')
-BOOLEAN = Type('boolean')
-ERROR   = Type('<error>')
-INT     = Type('int')
-STRING  = Type('string')
-UDT     = Type('udt')
-VOID    = Type('void')
-NULL    = Type('null')
-NONE    = Type('none')
+	@staticmethod
+	def add(nm, decl):
+		tp = Type(nm, decl)
+		Type.st_type_map[nm] = tp 
+		return tp
+
+	@staticmethod
+	def byName(nm):
+		if nm in Type.st_type_map:
+			return Type.st_type_map[nm]
+		else:
+			return None
+
+	@staticmethod
+	def printTypeMap():
+		print '--------------------------'
+		print '        Type Map          '
+		print '--------------------------'
+		for k in Type.st_type_map:
+			print Type.st_type_map[k].name()
+
+ARRAY   = Type.add('array', None)
+BOOLEAN = Type.add('boolean', None)
+ERROR   = Type.add('<error>', None)
+INT     = Type.add('int', None)
+STRING  = Type.add('string', None)
+UDT     = Type.add('udt', None)
+VOID    = Type.add('void', None)
+NULL    = Type.add('null', None)
+NONE    = Type.add('none', None)

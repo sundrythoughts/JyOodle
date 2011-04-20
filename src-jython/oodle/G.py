@@ -31,6 +31,7 @@ from oodle.FileConcat import FileConcat
 from oodle.Options import Options
 from oodle.SymbolTable import SymbolTable
 from oodle.SymbolMap import SymbolMap
+from oodle.TypeMap import TypeMap
 
 class G:
 	'''Globals. Holds static references to "singletons" and other globals'''
@@ -57,5 +58,10 @@ class G:
 	
 	@staticmethod
 	def symMap():
-		'''@RETURN: SymbolMap referenced'''
+		'''@RETURN: SymbolMap reference'''
 		return SymbolMap.symMap()
+	
+	@staticmethod
+	def typeMap():
+		'''@RETURN: TypeMap reference'''
+		return TypeMap.typeMap()

@@ -71,5 +71,5 @@ class Symbol:
 		return self
 	
 	def __str__(self):
-		ret = self.m_name + ', ' + str(self.m_decl) + ', ' + str(self.m_scope)
+		ret = self.m_name + ', ' + str(self.m_scope) + ', ' + str(self.m_decl) 
 		return ret

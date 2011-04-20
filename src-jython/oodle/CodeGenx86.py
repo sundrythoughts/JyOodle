@@ -675,7 +675,9 @@ class CodeGenx86(DepthFirstAdapter):
 		src = node.toString().strip()
 		ln = node.getId().getLine()
 		nm = node.getId().getText()
-		sym = G.symTab().lookup(nm)
+		#sym = G.symTab().lookup(nm)
+		#decl = sym.decl()
+		sym = G.symMap()[node]
 		decl = sym.decl()
 		self.writeAsmTextComment(src, ln)
 		self.writeAsmText('call ' + nm)

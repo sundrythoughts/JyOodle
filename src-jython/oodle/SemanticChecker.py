@@ -31,6 +31,7 @@ from cps450.oodle.analysis import DepthFirstAdapter
 from oodle.G import G
 from oodle.Declarations import *
 from oodle import Type
+from oodle.Type import Type as Tp
 
 class SemanticChecker(DepthFirstAdapter):
 	'''Check the Oodle source code for correctness'''
@@ -40,6 +41,7 @@ class SemanticChecker(DepthFirstAdapter):
 		
 		self.hack_has_class = False #HACK for MiniOodle
 		self.valid_scope = False    #help determine whether a scope is valid or not
+		self.m_cur_class = ""       #holds the name of the current class being processed
 	
 	###########################################################################
 	## Methods to help with debugging                                        ##
@@ -84,6 +86,14 @@ class SemanticChecker(DepthFirstAdapter):
 		if self.valid_scope:
 			G.symTab().endScope()
 		self.valid_scope = b
+	
+	def curClass(self):
+		''''''
+		return self.m_cur_class;
+	
+	def setCurClass(self, nm):
+		''''''
+		self.m_cur_class = nm
 	
 	def printTypeMap(self):
 		'''print every node in the map and its Type'''
@@ -132,6 +142,7 @@ class SemanticChecker(DepthFirstAdapter):
 			#if nm != 'start':
 			#	G.errors().semantic().addUnsupportedFeature('method must be named start()', ln)
 			G.symTab().push(nm, MethodDecl([], Type.VOID))   #add the (node id, type) to the SymbolTable
+			Tp.byName(self.curClass()).decl().addMethod(G.symTab().lookup(nm))
 			self.beginScope() #make new scope for local variables
 
 	def outAMethodSig(self, node):
@@ -329,6 +340,8 @@ class SemanticChecker(DepthFirstAdapter):
 			err = True
 			G.errors().semantic().add("mismatched class names 'class " + nm_hd +
 									  " is ... end " + nm_ft + "'", ln_ft)
+		#FIXME
+		self.endScope()
 	
 	def inAKlassHeader(self, node):
 		'''Push class name into SymbolTable
@@ -352,7 +365,9 @@ class SemanticChecker(DepthFirstAdapter):
 			G.errors().semantic().add("class '" + nm + "' already used", ln)
 
 		#add name to SymbolTable (even if and error occurred)
-		G.symTab().push(node.getId().getText(), ClassDecl())
+		G.symTab().push(nm, ClassDecl())
+		Tp.add(nm, G.symTab().lookup(nm).decl())
+		self.setCurClass(nm)
 		self.beginScope()
 		self.hack_has_class = True #HACK for MiniOodle: no class declared yet
 
@@ -882,6 +897,7 @@ class SemanticChecker(DepthFirstAdapter):
 		ln = node.getId().getLine()
 		nm = node.getId().getText()
 		sym = G.symTab().lookup(nm)
+		G.symMap()[node] = sym
 		ls_args = [self.typeMap[a] for a in node.getArgs()]
 
 		tp_ret = Type.NONE
