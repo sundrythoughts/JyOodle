@@ -26,8 +26,6 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #===============================================================================
 
-from oodle.Type import Type
-
 class Declaration:
 	''''''
 	def __init__(self):
@@ -94,6 +92,7 @@ class ClassDecl(Declaration):
 		
 		#point the dict index to the last element inserted in the list
 		self.m_var_dict[var_decl.name()] = self.m_var_list[-1]
+		return var_decl
 
 	def var(self, nm):
 		'''Get variable by name or None if name is not valid'''
@@ -109,6 +108,7 @@ class ClassDecl(Declaration):
 		
 		#point the dict index to the last element inserted in the list
 		self.m_method_dict[meth_decl.name()] = self.m_method_list[-1]
+		return meth_decl
 
 	def method(self, nm):
 		'''Get method by name or None if name is not valid'''
@@ -124,18 +124,82 @@ class ClassDecl(Declaration):
 			return True
 		return False
 
+class ExternDecl(Declaration):
+	'''Used for extern C functions'''
+	def __init__(self, nm, tp_nm='void'):
+		''''''
+		Declaration.__init__(self)
+		self.m_param_list = list() #parameters of LocalVarDecl
+		self.m_param_dict = dict() #index on LocalVarDecl.name() into list above
+		
+		self.setName(nm)
+		self.setTypeName(tp_nm)
+		
+		self.m_param_offset_cnt = 12  #12 because 8 is the 'this' pointer
+	
+	def __str__(self):
+		'''Get ExternDecl as string'''
+		s = 'extern '
+		s =  s + self.typeName() + ' '
+		s = s + self.name()
+		s = s + '(' + ', '.join([str(t) for t in self.m_param_list]) + ')'
+		return s 
+	
+	def __eq__(self, d):
+		'''Check for ExternDecl equivalence'''
+		if not isinstance(d, ExternDecl):
+			return False
+		return (self.m_arg_types == d.m_arg_types) and (self.m_ret_type == d.m_ret_type)
+	
+	def addParam(self, p):
+		'''Add a LocalVarDecl param'''
+		p.setOffset(self.m_param_offset_cnt) #set offset
+		self.m_param_list.append(p)
+		self.m_param_dict[p.name()] = self.m_param_list[-1]
+		self.m_param_offset_cnt += 4 #increment offset by 4
+		return p
+
+	def param(self, nm):
+		'''Get param by name or None if name is not valid'''
+		return self.m_param_dict[nm] if nm in self.m_param_dict else None
+	
+	def params(self):
+		'''Get the param list'''
+		return self.m_param_list
+
+	def exists(self, nm):
+		'''does variable name already exist in this scope'''		
+		#check for name in local var list and parameter list
+		#check for return type and if so, is nm == function name
+		if nm in self.m_param_dict:
+			return True
+		return False
+
+	def retTypeName(self):
+		'''Get the return type--same as self.typeName()'''
+		return self.typeName()
+
+	def setRetTypeName(self, nm):
+		'''Set the return type--same as self.setTypeName()'''
+		self.setTypeName(nm)
+
 class MethodDecl(Declaration):
 	''''''
 	def __init__(self, nm, tp_nm='void'):
 		''''''
+		Declaration.__init__(self)
+
 		self.m_param_list = list() #parameters of LocalVarDecl
 		self.m_param_dict = dict() #index on LocalVarDecl.name() into list above
-		
+
 		self.m_var_list = list() #vars of LocalVarDecl
 		self.m_var_dict = dict() #index on LocalVarDecl.name() into list above
+
+		self.setName(nm)
+		self.setTypeName(tp_nm)
 		
-		self.setName(nm)        #method name
-		self.setTypeName(tp_nm) #method return type name
+		self.m_param_offset_cnt = 12  #12 because 8 is the 'this' pointer	
+		self.m_local_offset_cnt = -8
 	
 	def __str__(self):
 		'''Get MethodDecl as string'''
@@ -151,10 +215,14 @@ class MethodDecl(Declaration):
 		if not isinstance(d, MethodDecl):
 			return False
 		return (self.m_arg_types == d.m_arg_types) and (self.m_ret_type == d.m_ret_type)
-	
+
 	def addParam(self, p):
+		'''Add a LocalVarDecl param'''
+		p.setOffset(self.m_param_offset_cnt) #set offset
 		self.m_param_list.append(p)
 		self.m_param_dict[p.name()] = self.m_param_list[-1]
+		self.m_param_offset_cnt += 4 #increment offset by 4
+		return p
 
 	def param(self, nm):
 		'''Get param by name or None if name is not valid'''
@@ -165,8 +233,12 @@ class MethodDecl(Declaration):
 		return self.m_param_list
 
 	def addVar(self, var_decl):
+		'''Add a LocalVarDecl variable'''
+		var_decl.setOffset(self.m_local_offset_cnt) #set offset
 		self.m_var_list.append(var_decl)
 		self.m_var_dict[var_decl.name()] = self.m_var_list[-1]
+		self.m_local_offset_cnt -= 4 #decrement offset by 4
+		return var_decl
 
 	def var(self, nm):
 		'''Get variable by name or None if name is not valid'''
@@ -176,19 +248,19 @@ class MethodDecl(Declaration):
 		'''Get the variable list'''
 		return self.m_var_list
 
+	def retVar(self, nm):
+		'''Get the return variable name (name of the method)'''
+		if self.typeName() != 'void' and nm == self.name():
+			return self
+		return None
+
 	def exists(self, nm):
-		'''does variable name already exist in this scope'''
-		if nm in self.m_var_dict or nm in self.m_param_dict:
+		'''does variable name already exist in this scope'''		
+		#check for name in local var list and parameter list
+		#check for return type and if so, is nm == function name
+		if nm in self.m_var_dict or nm in self.m_param_dict or self.retVar(nm):
 			return True
 		return False
-
-	def retTypeName(self):
-		'''Get the return type--same as self.typeName()'''
-		return self.typeName()
-
-	def setRetTypeName(self, nm):
-		'''Set the return type--same as self.setTypeName()'''
-		self.setTypeName(nm)
 
 class VarDecl(Declaration):
 	''''''
@@ -207,7 +279,7 @@ class VarDecl(Declaration):
 
 	def __str__(self):
 		'''Get VarDecl as string'''
-		return self.typeName() + ' ' + self.name()
+		return self.typeName() + ' ' + self.name() #+ ' /* ' + str(self.offset()) + ' */'
 
 	def offset(self):
 		'''get the memory offset of the variable'''

@@ -30,8 +30,7 @@ import cps450
 from cps450.oodle.analysis import DepthFirstAdapter
 from oodle.G import G
 from oodle.Declarations import *
-from oodle import Type
-from oodle.Type import Type as Tp
+from oodle.TypeMap import *
 
 class SemanticChecker(DepthFirstAdapter):
 	'''Check the Oodle source code for correctness'''
@@ -41,7 +40,8 @@ class SemanticChecker(DepthFirstAdapter):
 		
 		self.hack_has_class = False #HACK for MiniOodle
 		self.valid_scope = False    #help determine whether a scope is valid or not
-		self.m_cur_class = ""       #holds the name of the current class being processed
+		self.m_cur_class = ""    #holds the name of the current class
+		self.m_cur_method = ""   #holds the name of the current method
 	
 	###########################################################################
 	## Methods to help with debugging                                        ##
@@ -52,7 +52,26 @@ class SemanticChecker(DepthFirstAdapter):
 		n = (': ' + node.toString().strip()) if node else ''
 		if G.options().printDebug():
 			print 'SemanticChecker: ' + f.__name__ + n
+
+	###########################################################################
+	## Utility methods                                                       ##
+	###########################################################################
+	def curClass(self):
+		''''''
+		return self.m_cur_class;
 	
+	def setCurClass(self, nm):
+		''''''
+		self.m_cur_class = nm
+		
+	def curMethod(self):
+		''''''
+		return self.m_cur_method
+	
+	def setCurMethod(self, nm):
+		''''''
+		self.m_cur_method = nm
+
 	###########################################################################
 	## Methods to help with querying/modifying the SymbolTable               ##
 	###########################################################################
@@ -109,41 +128,20 @@ class SemanticChecker(DepthFirstAdapter):
 		vars = node.getVars()
 		
 
-		#setup local variable offsets on the stack
+		#HACK - local variable init is unsupported in MiniOodle
 		sloc = -8
 		for v in vars:
-			nm = v.getId().getText()     #get the variable name
-			sym = G.symTab().lookup(nm)  #get the symbol associated with the name
-			sym.decl().setOffset(sloc)          #set the stack offset of the variable
-			G.symMap()[v] = sym          #add the symbol to the SymbolMap
-			sloc -= 4                    #next local variable offset 
-			
 			ln = v.getId().getLine() #line number
-			#HACK - local variable init are unsupported in MiniOodle
 			if v.getExpr() != None:
 				G.errors().semantic().addUnsupportedFeature("local variable initialization", ln)
 
-		self.endScope() #remove all local variables 
-		
 	def inAMethodSig(self, node):
 		'''Check method signature
-		   Error Conditions:
-		    * Method already declared
-		    * HACK MiniOodle: any method besides start()'''
+		   Error Conditions:'''
 		self.printFunc(self.inAMethodSig, node)
 		nm = node.getId().getText() #get the method name
 		ln = node.getId().getLine()
-		sym = G.symTab().lookup(nm)
-		if sym != None:
-			G.errors().semantic().add("redeclared identifier '" + nm + "'", ln)
-			self.beginScope(False)
-		else:
-			#HACK: MiniOodle - if method is something other than start()
-			#if nm != 'start':
-			#	G.errors().semantic().addUnsupportedFeature('method must be named start()', ln)
-			G.symTab().push(nm, MethodDecl([], Type.VOID))   #add the (node id, type) to the SymbolTable
-			Tp.byName(self.curClass()).decl().addMethod(G.symTab().lookup(nm))
-			self.beginScope() #make new scope for local variables
+		self.setCurMethod(nm)
 
 	def outAMethodSig(self, node):
 		'''Add method signature to SymbolTable
@@ -151,68 +149,16 @@ class SemanticChecker(DepthFirstAdapter):
 		    * FIXME'''
 		self.printFunc(self.outAMethodSig, node)
 		nm = node.getId().getText() #get the method name
-		decl = G.symTab().lookup(nm).decl() #get the MethodDecl
 
-		#get argument list
-		n_args = [] #initialize to void parameters
-		args = node.getArgs()
-		if args != None:
-			for n in args: #get remaining arguments
-				n_args.append(self.typeMap[n])
-
-		#get return type
-		n_ret = Type.VOID #initialize to void return
-		ret = node.getRet()
-		if ret != None:
-			n_ret = self.typeMap[ret]
-
-		#set MethodDecl arg types and return type
-		decl.setArgTypes(n_args)
-		decl.setRetType(n_ret)
-		
-		#FIXME: Symbols aren't in the table...why?
-		#add args to the SymbolMap
-		sloc = 8
-		for a in args:
-			nm = a.getId().getText()     #get the arg name
-			sym = G.symTab().lookup(nm)  #get the symbol associated with the name
-			sym.decl().setOffset(sloc)   #set the stack offset of the arg
-			G.symMap()[a] = sym          #add the symbol to the SymbolMap
-			sloc += 4                    #next local variable offset
-	
-	def outAArgList(self, node):
-		''''''
-		self.printFunc(self.outAArgList, node)
-		#self.typeMap[node] = self.typeMap[node.getArgListTail()]
-	
-	def outAArgListTail(self, node):
-		''''''
-		self.printFunc(self.outAArgListTail, node)
-		self.typeMap[node] = self.typeMap[node.getArg()]
-	
 	def outAArg(self, node):
 		'''Manage method 'arg'
 		   Error Conditions:
 		    * var id is alread used in this scope'''
 		self.printFunc(self.outAArg, node)
 		nm = node.getId().getText() #get the variable name
-		if self.isVarNameUsed(nm):
-			G.errors().semantic().add("variable '" + nm + "' already used", ln)
 
-		tp = self.typeMap[node.getTp()] #get the variable type from the child node
-		self.typeMap[node] = tp              #store this nodes type
-		G.symTab().push(nm, LocalVarDecl(tp))   #add the (node id, type) to the SymbolTable
-	
-	def outAMethodVar(self, node):
-		'''Manage local method variables
-		   Error Conditions
-		    * Any local variables declared'''
-		self.printFunc(self.outAMethodVar)
-		var_node = node.getVar()
-		if var_node != None: #method variable init is unsupported in MiniOodle
-			ln = node.getVar().getId().getLine()
-			G.errors().semantic().addUnsupportedFeature('local method variables', ln)
-		self.typeMap[node] = self.typeMap[node.getVar()]
+		tp = self.typeMap[node.getTp()]   #get the variable type from the child node
+		self.typeMap[node] = tp           #store this nodes type
 
 	###########################################################################
 	## GENERIC VARIABLE DECLARATION STUFF (also includes method return type) ##
@@ -220,7 +166,6 @@ class SemanticChecker(DepthFirstAdapter):
 	def outAVar(self, node):
 		'''Manage 'var' declarations
 		   Error Conditions:
-		    * var id already used in this scope
 		    * var type is not declared
 		    * var type is mismatched'''
 		self.printFunc(self.outAVar, node)
@@ -228,11 +173,6 @@ class SemanticChecker(DepthFirstAdapter):
 		id = node.getId() #TId node
 		nm = id.getText() #variable name
 		ln = id.getLine() #line number
-		
-		#variable name already used
-		if self.isVarNameUsed(nm):
-			err = True
-			G.errors().semantic().add("variable '" + nm + "' already used", ln)
 		
 		#check assignment type
 		tp_assign = Type.NONE
@@ -251,31 +191,9 @@ class SemanticChecker(DepthFirstAdapter):
 		if tp_assign != Type.NONE and tp_decl != Type.NONE and tp_assign != tp_decl:
 			G.errors().semantic().add("type mismatch '" + tp_decl.name() +
 									  "' := '" + tp_assign.name(), ln)
+		#store this nodes type
+		self.typeMap[node] = tp_decl
 
-		#add name to SymbolTable (even if an error occurred)
-		self.typeMap[node] = tp_decl              #store this nodes type
-		if isinstance(node.parent(), cps450.oodle.node.AMethod): #local variable
-			G.symTab().push(nm, LocalVarDecl(tp_decl))
-		else: #instance var
-			G.symTab().push(nm, VarDecl(tp_decl))   #add the (node id, type) to the SymbolTable
-	
-#===============================================================================
-#	def outAVarAssign(self, node):
-#		'''Manage assignment during variable declaration
-#		   Error Conditions:
-#		    * HACK MiniOodle: any assigment during declaration is unsupported'''
-#		self.printFunc(self.outAVarAssign, node)
-#		#HACK MiniOodle: assignment not supported
-#		ln = node.getOpAssign().getLine()
-#		G.errors().semantic().addUnsupportedFeature('variable initialization', ln)
-# 
-#		self.typeMap[node] = self.typeMap[node.getExpr()]
-# 
-#	def outAVarType(self, node):
-#		'''Manage 'var' type'''
-#		self.printFunc(self.outAVarType, node)
-#		self.typeMap[node] = self.typeMap[node.getType()] #store this nodes type
-#===============================================================================
 
 	def outABoolType(self, node):
 		'''Manage 'boolean' type'''
@@ -305,13 +223,13 @@ class SemanticChecker(DepthFirstAdapter):
 
 		G.errors().semantic().addUnsupportedFeature('user-defined type', ln)
 		
+		tp = Type.NONE
 		#invalid/undeclared type name
-		if G.symTab().lookup(nm) == None:
-			err = True
+		if not G.typeMap.klassExists(nm):
 			G.errors().semantic().add("invalid/undeclared type name", ln)
-		
-		#add name to SymbolTable (even if and error occurred)
-		self.typeMap[node] = Type.Type(nm)
+		else:
+			tp = G.typeMap().klass(nm)
+		self.typeMap[node] = tp
 	
 	def outAArrayType(self, node):
 		'''Manage 'array' type
@@ -340,36 +258,14 @@ class SemanticChecker(DepthFirstAdapter):
 			err = True
 			G.errors().semantic().add("mismatched class names 'class " + nm_hd +
 									  " is ... end " + nm_ft + "'", ln_ft)
-		#FIXME
-		self.endScope()
-	
+
 	def inAKlassHeader(self, node):
-		'''Push class name into SymbolTable
-		   Error Conditions:
-		    * HACK MiniOodle: only one class can be declared 
-		    * Class name already used'''
+		''''''
 		self.printFunc(self.inAKlassHeader, node)
-		err = False       #set if an error is detected
 		id = node.getId() #TId node
 		nm = id.getText() #class name
 		ln = id.getLine() #line number
-		
-		#HACK for MiniOodle: no class declared yet
-		if self.hack_has_class:
-			err = True
-			G.errors().semantic().addUnsupportedFeature("multiple classes", ln)
-
-		#class name has already been used
-		if self.isClassNameUsed(nm):
-			err = True
-			G.errors().semantic().add("class '" + nm + "' already used", ln)
-
-		#add name to SymbolTable (even if and error occurred)
-		G.symTab().push(nm, ClassDecl())
-		Tp.add(nm, G.symTab().lookup(nm).decl())
 		self.setCurClass(nm)
-		self.beginScope()
-		self.hack_has_class = True #HACK for MiniOodle: no class declared yet
 
 	def inAKlassInherits(self, node):
 		'''Manage inheritance
@@ -383,7 +279,7 @@ class SemanticChecker(DepthFirstAdapter):
 		'''Manage class variables
 		   Error Conditions:
 		    * HACK MiniOodle: no class variable initialization'''
-		self.printFunc(self.outAKlassBody)
+		self.printFunc(self.inAKlassBody)
 		vars = node.getVars()
 
 		#class variable init is unsupported in MiniOodle
@@ -391,18 +287,6 @@ class SemanticChecker(DepthFirstAdapter):
 			if v.getExpr() != None:
 				ln = v.getId().getLine() #line number
 				G.errors().semantic().addUnsupportedFeature("class variable initialization", ln)
-
-	def outAKlassVar(self, node):
-		'''Manage class variables
-		   Error Conditions:
-		    * HACK MiniOodle: no class variable initialization'''
-		self.printFunc(self.outAKlassVar)
-		var_node = node.getVar().getVarAssign()
-		
-		#class variable init is unsupported in MiniOodle
-		if var_node != None:
-			ln = node.getVar().getVarAssign().getOpAssign().getLine() #line number
-			G.errors().semantic().addUnsupportedFeature("class variable initialization", ln)
 
 	###########################################################################
 	## STATEMENT STUFF                                                       ##
@@ -415,27 +299,19 @@ class SemanticChecker(DepthFirstAdapter):
 		self.printFunc(self.outAAssignStmt, node)
 		ln = node.getId().getLine()
 		nm = node.getId().getText()
-		sym = G.symTab().lookup(nm)
+		decl = G.typeMap().var(self.curClass(), self.curMethod(), nm)
 		tp_lhs = Type.NONE
 		tp_rhs = self.typeMap[node.getExpr()]
 		
 		#id does not exist or is not a variable or method
-		if sym == None or not isinstance(sym.decl(), (VarDecl, MethodDecl)):
+		if decl == None or not isinstance(decl, (VarDecl, MethodDecl)):
 			G.errors().semantic().add("'" + nm + "' does not exist", ln)
-		#id exists and is a local variable
-		elif isinstance(sym.decl(), LocalVarDecl):
-			G.symMap()[node] = sym
-			tp_lhs = sym.decl().varType()
-		#id exists and is a variable
-		elif isinstance(sym.decl(), VarDecl):
-			tp_lhs = sym.decl().varType()
-		#id exists and is a method
-		elif isinstance(sym.decl(), MethodDecl):
-			#G.errors().semantic().addUnsupportedFeature("method return", ln)
-			tp_lhs = sym.decl().retType()
+		#id exists and is a variable or method
+		elif isinstance(decl, (VarDecl, MethodDecl)):
+			tp_lhs = G.typeMap().klass(decl.typeName())
 		
 		#check for equivalent types
-		if sym != None and tp_lhs != tp_rhs:
+		if decl != None and tp_lhs != tp_rhs:
 			G.errors().semantic().add("'" + node.toString().strip() +
 									  "' assignment requires 2 operands of the same type", ln)
 	
@@ -449,12 +325,6 @@ class SemanticChecker(DepthFirstAdapter):
 		if tp != Type.BOOLEAN:
 			G.errors().semantic().add("if statement must evaluate on type " +
 									  Type.BOOLEAN.name(), ln)
-
-	def outAStmtElse(self, node):
-		'''Manage 'else' statement
-		   Error Conditions:
-		    * '''
-		self.printFunc(self.outAStmtElse, node)
 
 	def outALoopStmt(self, node):
 		'''Manage 'loop while' statement
@@ -505,25 +375,21 @@ class SemanticChecker(DepthFirstAdapter):
 		    * HACK MiniOodle 'out' and 'in' are allowed'''
 		self.printFunc(self.outAIdExpr, node)
 		nm = node.getId().getText()
-		sym = G.symTab().lookup(nm)
+		decl = G.typeMap().var(self.curClass(), self.curMethod(), nm)
 		ln = node.getId().getLine()
 		
 		tp = Type.NONE
 		#HACK - MiniOodle classes of 'in' and 'out'
-		if nm == 'out':
-			pass
-		elif nm == 'in':
-			pass
+		#if nm == 'out':
+		#	pass
+		#elif nm == 'in':
+		#	pass
 		#id is undefined
-		elif sym == None:
+		if decl == None:
 			G.errors().semantic().add("undefined variable '" + nm + "'", ln)
-		elif isinstance(sym.decl(), LocalVarDecl):
-			G.symMap()[node] = sym
-			tp = sym.decl().varType()
 		else:
-			tp = sym.decl().varType()
-		
-		self.typeMap[node] = tp
+			tp = G.typeMap().klass(decl.typeName())
+		self.typeMap[node] = tp #assign this nodes type
 
 	def outAStrExpr(self, node):
 		'''Manage 'string' expr9 expression
@@ -562,11 +428,11 @@ class SemanticChecker(DepthFirstAdapter):
 		self.printFunc(self.outANullExpr, node)
 		self.typeMap[node] = Type.NULL
 
-	def outAMeExpr9(self, node):
+	def outAMeExpr(self, node):
 		'''Manage 'me' expr9 expression
 		   Error Conditions
 		    * HACK MiniOodle: me is unsupported'''
-		self.printFunc(self.outAMeExpr9, node)
+		self.printFunc(self.outAMeExpr, node)
 		ln = node.getKwMe().getLine()
 		G.errors().semantic().addUnsupportedFeature('me', ln)
 		self.typeMap[node] = Type.NONE
@@ -896,32 +762,38 @@ class SemanticChecker(DepthFirstAdapter):
 		self.printFunc(self.outACall, node)
 		ln = node.getId().getLine()
 		nm = node.getId().getText()
-		sym = G.symTab().lookup(nm)
-		G.symMap()[node] = sym
+		klass = None
+		if node.getExpr():
+			klass = self.typeMap[node.getExpr()]
+		if klass:
+			klass = klass.typeName()
+		else:
+			klass = self.curClass()
+		print "***HERE***: " + str(klass) + " -> " + nm 
+		decl = G.typeMap().method(klass, nm) #FIXME - only allows calls to methods within the same class
 		ls_args = [self.typeMap[a] for a in node.getArgs()]
 
 		tp_ret = Type.NONE
 		#id does not exist or is not a method id
-		if sym == None or not isinstance(sym.decl(), MethodDecl):
+		if decl == None or not isinstance(decl, MethodDecl):
 			G.errors().semantic().add("method '" + nm + "' does not exist", ln)
 		#check for correct number and type of parameters
 		elif len(ls_args) > 0:
-			call_args = ls_args
-			meth_args = sym.decl().argTypes()
-			if len(call_args) != len(meth_args):
+			params = decl.params()
+			if len(params) != len(ls_args):
 				G.errors().semantic().add("method '" + nm + "' expects " +
-										  str(len(meth_args)) +
+										  str(len(params)) +
 										  " parameter(s) but was given " +
-										  str(len(call_args)), ln)
-			elif call_args != meth_args:
+										  str(len(ls_args)), ln)
+			elif ls_args != params:
 				G.errors().semantic().add("method '" + nm +
 										  "' expects parameters " +
-										  sym.decl().argStr() +
+										  str(params) +
 										  " but was given " +
-										  MethodDecl(call_args, None).argStr(), ln)
+										  str(ls_args), ln)
 		#get method return type
-		if sym != None:
-			tp_ret = sym.decl().retType()
+		if decl != None:
+			tp_ret = G.typeMap().klass(decl.typeName())
 		
 		self.typeMap[node] = tp_ret
 	

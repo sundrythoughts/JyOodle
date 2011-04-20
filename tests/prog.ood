@@ -1,53 +1,15 @@
 ~ This is a comment
 
-class Klass inherits from Main is
-	var: string
-	start(new_var:int) is
-	begin
-	end start
-end Klass
-
 class Main is
-	x: int
-	b: boolean
-
-	recursive(lp:int) is
+	func(p:int) : int is
+		x:int
+		y:boolean
 	begin
-		if (lp >= 0) then
-			out.writeint(lp)
-			recursive(lp - 1)
-		end if
-	end recursive
+		y := x = 5
+		func := x + p * 5
+	end func
 
-	func1(a:int ; b:int) : int is
-		f1: int
-		f2: int
-		f3: int
-	begin
-		f1 := 55
-		f2 := 37
-		f3 := a + b
-		out.writeint(f1)
-		out.writeint(f2)
-		out.writeint(f3)
-		out.writeint(a)
-		func1 := 63
-	end func1
-	
 	start() is
-		i1: int
-		i2: int
-		b1: boolean
 	begin
-		i1 := 3
-		i2 := i1 + 13
-		b1 := false
-		x := x + i2
-		out.writeint(i1)
-		out.writeint(i2)
-		out.writeint(x)
-		func1(70, 30)
-		out.writeint(func1(4,3) + func1(32, 8))
-		recursive(100)
 	end start
 end Main

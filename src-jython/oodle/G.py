@@ -51,10 +51,10 @@ class G:
 		'''@RETURN: Options reference'''
 		return Options.options()
 
-	@staticmethod
-	def symTab():
-		'''@RETURN: SymbolTable reference'''
-		return SymbolTable.symTab()
+	#@staticmethod
+	#def symTab():
+	#	'''@RETURN: SymbolTable reference'''
+	#	return SymbolTable.symTab()
 	
 	@staticmethod
 	def symMap():
