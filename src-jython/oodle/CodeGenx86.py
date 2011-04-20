@@ -30,7 +30,7 @@ from cps450.oodle.analysis import DepthFirstAdapter
 from cps450.oodle.node import Node
 from oodle.G import G
 from oodle.Declarations import *
-from oodle import Type
+from oodle.TypeMap import *
 import os
 import subprocess
 
@@ -43,6 +43,28 @@ class CodeGenx86(DepthFirstAdapter):
 		self.asm_data_list = []     #list of asm instructions in the .data segment
 		self.asm_text_list = []     #list of asm instructions in the .text segment
 		self.label_counter = 0      #unique counter for label generation
+		
+		self.m_cur_class = ""    #holds the name of the current class
+		self.m_cur_method = ""   #holds the name of the current method
+
+	###########################################################################
+	## Utility methods                                                       ##
+	###########################################################################
+	def curClass(self):
+		''''''
+		return self.m_cur_class;
+	
+	def setCurClass(self, nm):
+		''''''
+		self.m_cur_class = nm
+		
+	def curMethod(self):
+		''''''
+		return self.m_cur_method
+	
+	def setCurMethod(self, nm):
+		''''''
+		self.m_cur_method = nm
 
 	def prefix(self):
 		'''Get the proper prefix for asm variables'''
@@ -192,6 +214,8 @@ class CodeGenx86(DepthFirstAdapter):
 		ln = node.getId().getLine()
 		src = node.toString().strip()
 		nm = node.getId().getText()
+
+		self.setCurMethod(nm) #change the current method
 		
 		self.writeAsmTextComment(src, ln)
 		self.writeAsmTextFunc(nm)
@@ -202,7 +226,8 @@ class CodeGenx86(DepthFirstAdapter):
 		mem = -4
 		vars = node.parent().getVars()
 		if len(vars) > 0:
-			mem = G.symMap()[vars[-1]].decl().offset()
+			mem = G.typeMap().method(self.curClass(), self.curMethod()).vars()[-1].offset()
+			#mem = G.symMap()[vars[-1]].decl().offset()
 		self.writeAsmText('pushl %ebp')
 		self.writeAsmText('movl %esp, %ebp')
 		self.writeAsmText('addl $(' + str(mem) + '), %esp')
@@ -283,6 +308,10 @@ class CodeGenx86(DepthFirstAdapter):
 	def inAKlassHeader(self, node):
 		''''''
 		self.printFunc(self.inAKlassHeader, node)
+		id = node.getId() #TId node
+		nm = id.getText() #class name
+		ln = id.getLine() #line number
+		self.setCurClass(nm)
 	
 	def inAKlassInherits(self, node):
 		''''''
@@ -303,21 +332,6 @@ class CodeGenx86(DepthFirstAdapter):
 			self.writeAsmComment('#' + src, ln)
 			self.writeAsm('\t.comm\t' + nm + ',4,4') #global class variable
 
-	def inAKlassVar(self, node):
-		'''Generate 'class variable' comments'''
-		self.printFunc(self.inAKlassVar)
-		ln = node.getVar().getId().getLine()
-		src = node.toString().strip()
-		self.writeAsmComment('#' + src, ln)
-
-	def outAKlassVar(self, node):
-		'''Generate 'class variable' code
-		   Types
-			* any type'''
-		self.printFunc(self.outAKlassVar)
-		nm = self.prefix() + node.getVar().getId().getText() #variable name
-		self.writeAsm('\t.comm\t' + nm + ',4,4') #global class variable
-
 	###########################################################################
 	## STATEMENT STUFF													   ##
 	###########################################################################
@@ -334,14 +348,7 @@ class CodeGenx86(DepthFirstAdapter):
 			* NONE'''
 		self.printFunc(self.outAAssignStmt, node)
 		nm = node.getId().getText()
-		sym = G.symTab().lookup(nm)
-		
-		#get Declaration if it is in the SymbolTable
-		decl = None
-		if node in G.symMap():
-			decl = G.symMap()[node].decl()
-		elif sym != None:
-			decl = sym.decl()
+		decl = G.typeMap().var(self.curClass(), self.curMethod(), nm)
 
 		#method return
 		if isinstance(decl, MethodDecl):
@@ -430,18 +437,17 @@ class CodeGenx86(DepthFirstAdapter):
 		   Types
 		    * a variable name'''
 		self.printFunc(self.outAIdExpr, node)
-		nm = self.prefix() + node.getId().getText()
+		nm = node.getId().getText()
 		
 		#get the Declaration if it is in the SymbolMap
-		decl = None
-		if node in G.symMap():
-			decl = G.symMap()[node].decl()
+		decl = G.typeMap().var(self.curClass(), self.curMethod(), nm)
 		
 		#local variable
 		if isinstance(decl, LocalVarDecl):
 			self.writeAsmText('pushl ' + str(decl.offset()) + '(%ebp)')
 		#variable
 		else:
+			nm = self.prefix () + nm
 			self.writeAsmText('pushl ' + nm)
 
 	def outAStrExpr(self, node):
@@ -675,18 +681,24 @@ class CodeGenx86(DepthFirstAdapter):
 		src = node.toString().strip()
 		ln = node.getId().getLine()
 		nm = node.getId().getText()
-		#sym = G.symTab().lookup(nm)
-		#decl = sym.decl()
-		sym = G.symMap()[node]
-		decl = sym.decl()
+		klass = None
+		if node.getExpr():
+			klass = self.typeMap[node.getExpr()]
+		if klass:
+			klass = klass.typeName()
+		else:
+			klass = self.curClass()
+		decl = G.typeMap().method(klass, nm) #FIXME - only allows calls to methods within the same class
+		if not decl:
+			decl = G.typeMap().extern(nm)
 		self.writeAsmTextComment(src, ln)
 		self.writeAsmText('call ' + nm)
 		
 		#FIXME - HACK FOR REMOVING/NOT REMOVING PARAMETERS
-		if len(decl.argTypes()) == 1 and decl.argTypes()[0] == Type.VOID:
+		if len(decl.params()) == 1 and decl.typeName()[0] == Type.VOID.typeName():
 			pass 
 		else: 
-			self.writeAsmText('addl $' + str(len(decl.argTypes()) * 4 ) + ', %esp')
+			self.writeAsmText('addl $' + str(len(decl.params()) * 4 ) + ', %esp')
 
 	def inStart(self, node):
 		''''''

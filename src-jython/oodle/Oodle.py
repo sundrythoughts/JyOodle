@@ -55,8 +55,10 @@ def main():
 	#FIXME - HUGE HACK for readint/writeint
 	#G.symTab().push('readint', oodle.Declarations.MethodDecl([oodle.Type.VOID], oodle.Type.INT))
 	#G.symTab().push('writeint', oodle.Declarations.MethodDecl([oodle.Type.INT], oodle.Type.VOID))
-	G.typeMap().addKlass(ClassDecl('in')).addMethod(MethodDecl('readint', 'int'))
-	G.typeMap().addKlass(ClassDecl('out')).addMethod(MethodDecl('writeint')).addParam(LocalVarDecl('i', 'int'))
+	#G.typeMap().addKlass(ClassDecl('in')).addMethod(MethodDecl('readint', 'int'))
+	#G.typeMap().addKlass(ClassDecl('out')).addMethod(MethodDecl('writeint')).addParam(LocalVarDecl('i', 'int'))
+	G.typeMap().addExtern(ExternDecl('readint', 'int'))
+	G.typeMap().addExtern(ExternDecl('writeint')).addParam(LocalVarDecl('i', 'int'))
 	
 	#FIXME - debug printing
 	G.options().setPrintDebug(True)
@@ -90,10 +92,10 @@ def main():
 	
 	#FIXME - debug stuff
 	
-	if G.errors().hasErrors():
-		print str(G.typeMap())
-		G.errors().printErrors()
-		return
+	#if G.errors().hasErrors():
+	#	print str(G.typeMap())
+	#	G.errors().printErrors()
+	#	return
 
 	#perform semantic checks (new code)
 	print 'Error Checking...'
@@ -105,15 +107,15 @@ def main():
 		G.errors().printErrors()
 		return
 
-	#FIXME - debug
-	print str(G.typeMap())
-
-	#print 'Compiling...'
-	#code_gen = CodeGenx86()
-	#st_node.apply(code_gen)
-	#code_gen.buildBinary(G.options().generateAssembly())
+	print 'Compiling...'
+	code_gen = CodeGenx86()
+	st_node.apply(code_gen)
+	code_gen.buildBinary(G.options().generateAssembly())
 	
 	print 'DONE'
+	
+	#FIXME - debug
+	print str(G.typeMap())
 
 if __name__ == "__main__":
 	main()

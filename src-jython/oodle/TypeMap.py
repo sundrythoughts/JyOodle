@@ -43,7 +43,7 @@ class TypeMap:
 	def addExtern(self, func_decl):
 		'''add a FunctionDecl extern to the TypeMap'''
 		nm = func_decl.name()
-		if self.exists(nm):
+		if self.externExists(nm):
 			return self.extern(nm)
 		self.m_extern_list.append(func_decl)
 		self.m_extern_dict[nm] = self.m_extern_list[-1]
@@ -150,7 +150,7 @@ class TypeMap:
 		''''''
 		s = ""
 		for e in self.m_extern_list:
-			s += str(e)
+			s = s + str(e) + '\n'
 		for c in self.m_klass_list:
 			s += str(c)
 		return s

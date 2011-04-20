@@ -9,6 +9,7 @@ class CFact is
  Fact(num: int): int is
    answer: int
  begin
+    writeint(num)
     if num = 0 then    
       answer := 1
     else
@@ -23,7 +24,8 @@ class CFact is
   begin
     isOk := false
     loop while not isOk
-      num := in.readint()       
+      ~num := in.readint()
+      num := readint()       
       isOk := (num >= 1)
     end loop    
   end Go
@@ -32,8 +34,10 @@ class CFact is
   begin 
     Go()
     num2 := Fact(num)
-    out.writeint(num)   ~ Original number
-    out.writeint(num2)  ~ factorial of num
+    ~out.writeint(num)   ~ Original number
+    writeint(num)
+    ~out.writeint(num2)  ~ factorial of num
+    writeint(num2)
   end start
 end CFact
 

@@ -10,9 +10,12 @@ class CBasics is
   begin
     meth2 := a + b  ~ 25
     a := 10
-    out.writeint(a) ~ 10 
-    out.writeint(b) ~ -5 
-    out.writeint(c) ~ 0
+    ~out.writeint(a) ~ 10
+    writeint(a) 
+    ~out.writeint(b) ~ -5
+    writeint(b) 
+    ~out.writeint(c) ~ 0
+    writeint(c)
     
   end meth2
 
@@ -21,8 +24,10 @@ class CBasics is
   begin
     d := -5
     meth1 := meth2(a + b, d)
-    out.writeint(a) ~ 10
-    out.writeint(b) ~ 20    
+    ~out.writeint(a) ~ 10
+    writeint(a)
+    ~out.writeint(b) ~ 20
+    writeint(b)    
   end meth1
 
   start() is
@@ -32,13 +37,19 @@ class CBasics is
   begin 
     x := 10
     y := 20
-    out.writeint(num)  ~ should be 0
-    out.writeint(x) ~ 10
-    out.writeint(y) ~ 20    
-    out.writeint(d) ~ 0
+    ~out.writeint(num)  ~ should be 0
+    writeint(num)
+    ~out.writeint(x) ~ 10
+    writeint(x)
+    ~out.writeint(y) ~ 20
+    writeint(y)    
+    ~out.writeint(d) ~ 0
+    writeint(d)
     num := meth1(x, y)
-    out.writeint(d) ~ -5
-    out.writeint(num) ~ 25
+    ~out.writeint(d) ~ -5
+    writeint(d)
+    ~out.writeint(num) ~ 25
+    writeint(num)
     
   end start
 end CBasics

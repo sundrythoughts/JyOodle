@@ -169,3 +169,33 @@ class TypeMapBuilder(DepthFirstAdapter):
 			else:
 				var_decl = InstanceVarDecl(nm, tp)
 				klass.addVar(var_decl) #add var to TypeMap
+
+	def inAXtern(self, node):
+		''''''
+		self.printFunc(self.inAXtern, node)
+
+		ln = node.getId().getLine()
+		nm = node.getId().getText()
+		tp_map = G.typeMap()
+		if tp_map.externExists(nm):
+			G.errors().semantic().add("extern '" + nm + "' already exists", ln)
+		else:
+			tp_map.addExtern(ExternDecl(nm))
+
+		ex = tp_map.extern(nm)
+		if node.getRet():
+			tp = node.getRet().getTp().getText()
+			ex.setTypeName(tp) #set the return type name
+		
+		args = node.getArgs()
+		for a in args:
+			ln = a.getId().getLine()
+			nm = a.getId().getText()
+			tp = ""
+			if a.getTp():
+				tp = a.getTp().getTp().getText()
+			if ex.exists(nm):
+				G.errors().semantic().add("parameter '" + nm + "' already exists", ln)
+			else:
+				par_decl = LocalVarDecl(nm, tp)
+				ex.addParam(par_decl) #add param to TypeMap

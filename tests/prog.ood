@@ -1,5 +1,8 @@
 ~ This is a comment
 
+extern writeint(i : int)
+extern readint() : int
+
 class Main is
 	func(p:int) : int is
 		x:int

@@ -760,6 +760,7 @@ class SemanticChecker(DepthFirstAdapter):
 		    * wrong number of parameters
 		    * wrong parameter types'''
 		self.printFunc(self.outACall, node)
+		tp_map = G.typeMap()
 		ln = node.getId().getLine()
 		nm = node.getId().getText()
 		klass = None
@@ -769,17 +770,18 @@ class SemanticChecker(DepthFirstAdapter):
 			klass = klass.typeName()
 		else:
 			klass = self.curClass()
-		print "***HERE***: " + str(klass) + " -> " + nm 
 		decl = G.typeMap().method(klass, nm) #FIXME - only allows calls to methods within the same class
+		if not decl:
+			decl = G.typeMap().extern(nm)
 		ls_args = [self.typeMap[a] for a in node.getArgs()]
 
 		tp_ret = Type.NONE
 		#id does not exist or is not a method id
-		if decl == None or not isinstance(decl, MethodDecl):
+		if decl == None or not isinstance(decl, (MethodDecl, ExternDecl)):
 			G.errors().semantic().add("method '" + nm + "' does not exist", ln)
 		#check for correct number and type of parameters
 		elif len(ls_args) > 0:
-			params = decl.params()
+			params = [tp_map.klass(p.typeName()) for p in decl.params()]
 			if len(params) != len(ls_args):
 				G.errors().semantic().add("method '" + nm + "' expects " +
 										  str(len(params)) +
@@ -788,9 +790,9 @@ class SemanticChecker(DepthFirstAdapter):
 			elif ls_args != params:
 				G.errors().semantic().add("method '" + nm +
 										  "' expects parameters " +
-										  str(params) +
+										  str([str(p) for p in params]) +
 										  " but was given " +
-										  str(ls_args), ln)
+										  str([str(a) for a in ls_args]), ln)
 		#get method return type
 		if decl != None:
 			tp_ret = G.typeMap().klass(decl.typeName())

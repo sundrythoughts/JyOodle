@@ -51,6 +51,7 @@ Tokens
   kw_class =    'class';
   kw_else =     'else';
   kw_end =      'end';
+  kw_extern =   'extern';
   kw_false =    'false';
   kw_from =     'from';
   kw_if =       'if';
@@ -116,14 +117,33 @@ Ignored Tokens
   line_cont, blank, comment;
   
 Productions
-	start                             {-> start}
-	    = [cr1]:cr_star klass_list    {->New start([klass_list.klass])}
+	start                                        {-> start}
+	    = [cr1]:cr_star xtern_list klass_list    {-> New start([xtern_list.xtern], [klass_list.klass])}
 	    ;
   
 	cr_star = T.eol*;
   
 	cr_plus = T.eol+;
-	
+
+	xtern_list      {-> xtern*}
+	    = xtern*    {-> [xtern.xtern]}
+	    ;
+
+	xtern                                                                                     {-> xtern}
+	    = T.kw_extern T.id T.misc_l_paren xtern_arg_list? T.misc_r_paren var_type? cr_plus    {-> New xtern(T.id, [xtern_arg_list.xtern_arg], var_type.type)}
+	    ;
+
+	xtern_arg_list                          {-> xtern_arg*}
+	    = xtern_arg xtern_arg_list_tail*    {-> [xtern_arg, xtern_arg_list_tail.xtern_arg]}
+	    ;
+	xtern_arg_list_tail                 {-> xtern_arg}
+	    = T.misc_semicolon xtern_arg    {-> xtern_arg}
+	    ;
+  
+	xtern_arg                       {-> xtern_arg}
+	    = T.id T.misc_colon type    {-> New xtern_arg(T.id, type)}
+	    ;
+
 	klass_list                                              {-> klass*}
 	    = {single} [head]:klass cr_star                     {-> [head.klass]}
 	    | {multi} [head]:klass cr_plus [tail]:klass_list    {-> [head.klass, tail.klass]}
@@ -303,8 +323,11 @@ Productions
 	    ;
 
 Abstract Syntax Tree
-	start = [klasses]:klass*
+	start = [externs]:xtern* [klasses]:klass*
 	      ;
+
+	xtern = [id]:T.id [args]:xtern_arg* [ret]:type?;
+	xtern_arg = [id]:T.id [tp]:type;
 
 	klass = klass_header klass_body klass_footer;
 

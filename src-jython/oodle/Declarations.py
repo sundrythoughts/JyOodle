@@ -135,7 +135,7 @@ class ExternDecl(Declaration):
 		self.setName(nm)
 		self.setTypeName(tp_nm)
 		
-		self.m_param_offset_cnt = 12  #12 because 8 is the 'this' pointer
+		self.m_param_offset_cnt = 8  #8 because extern functions are non-object-oriented
 	
 	def __str__(self):
 		'''Get ExternDecl as string'''
@@ -198,7 +198,7 @@ class MethodDecl(Declaration):
 		self.setName(nm)
 		self.setTypeName(tp_nm)
 		
-		self.m_param_offset_cnt = 12  #12 because 8 is the 'this' pointer	
+		self.m_param_offset_cnt = 8  #8 for non object oriented; object-oriented is 12 because 8 is the 'this' pointer	
 		self.m_local_offset_cnt = -8
 	
 	def __str__(self):

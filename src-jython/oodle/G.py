@@ -56,10 +56,10 @@ class G:
 	#	'''@RETURN: SymbolTable reference'''
 	#	return SymbolTable.symTab()
 	
-	@staticmethod
-	def symMap():
-		'''@RETURN: SymbolMap reference'''
-		return SymbolMap.symMap()
+	#@staticmethod
+	#def symMap():
+	#	'''@RETURN: SymbolMap reference'''
+	#	return SymbolMap.symMap()
 	
 	@staticmethod
 	def typeMap():
