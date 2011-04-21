@@ -39,6 +39,32 @@ class TypeMap:
 		
 		self.m_extern_list = list()
 		self.m_extern_dict = dict()
+		
+		self.m_glb_var_list = list()
+		self.m_glb_var_dict = dict()
+
+	def addGlbVar(self, glb_decl):
+		'''add a GlobalVarDecl to the TypeMap'''
+		nm = glb_decl.name()
+		if self.glbVarExists(nm):
+			return self.glbVar(nm)
+		self.m_glb_var_list.append(glb_decl)
+		self.m_glb_var_dict[nm] = self.m_glb_var_list[-1]
+		return glb_decl
+
+	def glbVar(self, nm):
+		'''get global variable by name or None if name is invalid'''
+		return self.m_glb_var_dict[nm] if nm in self.m_glb_var_dict else None
+	
+	def glbVars(self):
+		'''get list of global variables'''
+		return self.m_glb_var_list	
+
+	def glbVarExists(self, nm):		
+		'''does global variable name already exist in this scope'''
+		if nm in self.m_glb_var_dict:
+			return True
+		return False
 
 	def addExtern(self, func_decl):
 		'''add a FunctionDecl extern to the TypeMap'''
@@ -151,6 +177,8 @@ class TypeMap:
 		s = ""
 		for e in self.m_extern_list:
 			s = s + str(e) + '\n'
+		for v in self.m_glb_var_list:
+			s = s + str(v) + '\n'
 		for c in self.m_klass_list:
 			s += str(c)
 		return s

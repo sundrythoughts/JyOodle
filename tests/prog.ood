@@ -1,6 +1,7 @@
-extern writeint(i : int)
+t : Tester
 
 class Main is
+	t:Tester
 	func(p:int) : int is
 		x:int
 		y:boolean
@@ -11,10 +12,9 @@ class Main is
 
 	start() is
 	begin
+		t := new Tester
 	end start
 end Main
-
-extern readint() : int
 
 class Tester is
 end Tester

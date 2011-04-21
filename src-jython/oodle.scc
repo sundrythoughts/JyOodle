@@ -131,8 +131,9 @@ Productions
 	    ;
 
 	toplevel               {-> toplevel}
-	    = {xtern} xtern    {-> New toplevel.xtern(xtern)}
-	    | {klass} klass    {-> New toplevel.klass(klass)}
+	    = {klass} klass    {-> New toplevel.klass(klass)}
+	    | {var} var        {-> New toplevel.var(var)}
+	    | {xtern} xtern    {-> New toplevel.xtern(xtern)}
 	    ; 
 
 	xtern                                                                                     {-> xtern}
@@ -169,12 +170,12 @@ Productions
 	    = T.kw_end T.id    {-> New klass_footer(T.id)}
 	    ;
 	
-	klass_var    {-> var}
-	    = var    {-> var.var}
+	klass_var            {-> var}
+	    = var cr_plus    {-> var.var}
 	    ;
 
-	var                                         {-> var}
-	    = T.id var_type? var_assign? cr_plus    {-> New var(T.id, var_type.type, var_assign.expr)}
+	var                                 {-> var}
+	    = T.id var_type? var_assign?    {-> New var(T.id, var_type.type, var_assign.expr)}
 	    ;
   
 	var_type                   {-> type}
@@ -185,8 +186,8 @@ Productions
 	    = T.op_assign expr    {-> expr.expr}
 	    ;
 	
-	method_var   {-> var}
-	    = var    {-> var.var}
+	method_var           {-> var}
+	    = var cr_plus    {-> var.var}
 	    ;
 	
 	method_sig                                                      {-> method_sig}
@@ -295,7 +296,7 @@ Productions
         | {false} T.kw_false                            {-> New expr.false(T.kw_false)}
         | {null}  T.kw_null                             {-> New expr.null(T.kw_null)}
         | {me}    T.kw_me                               {-> New expr.me(T.kw_me)}
-        | {new}   T.kw_new type                         {-> New expr.new(type)}
+        | {new}   T.kw_new type                         {-> New expr.new(T.kw_new, type)}
         | {par}   T.misc_l_paren expr T.misc_r_paren    {-> expr.expr}
         | {array} T.id arr_expr_list                    {-> New expr.array(T.id, [arr_expr_list.expr])}
         | {call}  call                                  {-> New expr.call(call.call)}
@@ -328,6 +329,7 @@ Abstract Syntax Tree
 	      ;
 
 	toplevel = {klass} [klass]:klass
+	         | {var}   [var]:var
 	         | {xtern} [extern]:xtern
 	         ;
 
@@ -388,7 +390,7 @@ Abstract Syntax Tree
 	     | {false}   [value]:T.kw_false
 	     | {null}    [value]:T.kw_null
 	     | {me}      [value]:T.kw_me
-	     | {new}     [tp]:type
+	     | {new}     [value]:T.kw_new [tp]:type
 	     | {array}   [id]:T.id [index]:expr*
 	     | {call}    [call]:call
 	     ;

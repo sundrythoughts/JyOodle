@@ -66,6 +66,8 @@ class ClassDecl(Declaration):
 		#set the name and the typeName to be the same
 		self.setName(nm)
 		self.setTypeName(nm)
+		
+		self.m_inst_offset_cnt = 8 #offset to first instance variable
 
 	def __str__(self):
 		'''Get ClassDecl as string'''
@@ -88,10 +90,12 @@ class ClassDecl(Declaration):
 
 	def addVar(self, var_decl):
 		'''Add VarDecl to class'''
+		var_decl.setOffset(self.m_inst_offset_cnt)
 		self.m_var_list.append(var_decl)
 		
 		#point the dict index to the last element inserted in the list
 		self.m_var_dict[var_decl.name()] = self.m_var_list[-1]
+		self.m_inst_offset_cnt += 4
 		return var_decl
 
 	def var(self, nm):
@@ -198,7 +202,9 @@ class MethodDecl(Declaration):
 		self.setName(nm)
 		self.setTypeName(tp_nm)
 		
-		self.m_param_offset_cnt = 8  #8 for non object oriented; object-oriented is 12 because 8 is the 'this' pointer	
+		# FIXME - needs to be for objects
+		# 8 for non object oriented; object-oriented is 12 because 8 is the 'this' pointer
+		self.m_param_offset_cnt = 8  	
 		self.m_local_offset_cnt = -8
 	
 	def __str__(self):
@@ -310,5 +316,17 @@ class InstanceVarDecl(VarDecl):
 	def __eq__(self, d):
 		'''Check for InstanceVarDecl equivalence'''
 		if not isinstance(d, InstanceVarDecl):
+			return False
+		return self.typeName() == d.typeName()
+
+class GlobalVarDecl(VarDecl):
+	'''Store global variables'''
+	def __init__(self, nm, tp_nm):
+		''''''
+		VarDecl.__init__(self, nm, tp_nm)
+
+	def __eq__(self, d):
+		'''Check for GlobalVarDecl equivalence'''
+		if not isinstance(d, GlobalVarDecl):
 			return False
 		return self.typeName() == d.typeName()

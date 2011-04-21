@@ -170,6 +170,20 @@ class TypeMapBuilder(DepthFirstAdapter):
 				var_decl = InstanceVarDecl(nm, tp)
 				klass.addVar(var_decl) #add var to TypeMap
 
+	def inAVarToplevel(self, node):
+		''''''
+		self.printFunc(self.inAVarToplevel, node)
+		ln = node.getVar().getId().getLine()
+		
+		tp_map = G.typeMap()
+		nm = node.getVar().getId().getText()
+		tp = node.getVar().getTp().getTp().getText()
+		if tp_map.glbVarExists(nm):
+			G.errors().semantic().add("global variable '" + nm + "' already exists", ln)
+		else:
+			var_decl = GlobalVarDecl(nm, tp)
+			tp_map.addGlbVar(var_decl) #add var to TypeMap
+
 	def inAXtern(self, node):
 		''''''
 		self.printFunc(self.inAXtern, node)

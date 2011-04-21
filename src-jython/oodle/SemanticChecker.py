@@ -213,19 +213,16 @@ class SemanticChecker(DepthFirstAdapter):
 		G.errors().semantic().addUnsupportedFeature('string', ln)
 	
 	def outAUdtType(self, node):
-		'''Manage 'array' type
-		   Error Conditions:
-		    * Unsupported Feature'''
+		'''Manage 'user defined types' (classes types) type
+		   Error Conditions:'''
 		self.printFunc(self.outAUdtType, node)
 		err = False
 		nm = node.getTp().getText()
 		ln = node.getTp().getLine()
 
-		G.errors().semantic().addUnsupportedFeature('user-defined type', ln)
-		
 		tp = Type.NONE
 		#invalid/undeclared type name
-		if not G.typeMap.klassExists(nm):
+		if not G.typeMap().klassExists(nm):
 			G.errors().semantic().add("invalid/undeclared type name", ln)
 		else:
 			tp = G.typeMap().klass(nm)
@@ -442,9 +439,12 @@ class SemanticChecker(DepthFirstAdapter):
 		   Error Conditions
 		    * HACK MiniOodle: new is unsupported'''
 		self.printFunc(self.outANewExpr, node)
-		ln = node.getKwNew().getLine()
-		G.errors().semantic().addUnsupportedFeature('new', ln)
-		self.typeMap[node] = Type.NONE
+		ln = node.getValue().getLine()
+		nm = node.getTp().getTp().getText()
+		tp = G.typeMap().klass(nm)
+		if not tp:
+			tp = Type.NONE
+		self.typeMap[node] = tp
 
 	def outAArrayExpr(self, node):
 		'''Manage 'array' expression
