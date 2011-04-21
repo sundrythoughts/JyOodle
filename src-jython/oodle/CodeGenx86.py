@@ -205,6 +205,54 @@ class CodeGenx86(DepthFirstAdapter):
 		return ret
 
 	###########################################################################
+	## FUNCTION DECLARATION STUFF											 ##
+	###########################################################################
+	def inAFuncSig(self, node):
+		''''''
+		self.printFunc(self.inAFuncSig, node)
+		
+		ln = node.getId().getLine()
+		src = node.toString().strip()
+		nm = node.getId().getText()
+
+		self.setCurMethod(nm) #change the current method
+		
+		self.writeAsmTextComment(src, ln)
+		self.writeAsmTextFunc(nm)
+
+	def outAFuncSig(self, node):
+		''''''
+		self.printFunc(self.outAFuncSig, node)
+		mem = -4
+		vars = node.parent().getVars()
+		if len(vars) > 0:
+			mem = G.typeMap().func(self.curMethod()).vars()[-1].offset()
+			#mem = G.symMap()[vars[-1]].decl().offset()
+		self.writeAsmText('pushl %ebp')
+		self.writeAsmText('movl %esp, %ebp')
+		self.writeAsmText('addl $(' + str(mem) + '), %esp')
+		for v in range(-4, mem - 4, -4):
+			self.writeAsmText('movl $0, ' + str(v) + '(%ebp)')
+
+	def inAFunc(self, node):
+		''''''
+		self.printFunc(self.inAFunc)
+
+	def outAFunc(self, node):
+		''''''
+		self.printFunc(self.outAFunc)
+		self.writeAsmText('movl -4(%ebp), %eax')  # put return value in %eax
+		self.writeAsmText('movl %ebp, %esp')      # delete local variables
+		self.writeAsmText('popl %ebp')            # restore old %ebp
+		self.writeAsmText('ret')
+		self.setCurMethod('')                     #leave scope of current method/func
+
+	def outAFuncArg(self, node):
+		''''''
+		self.printFunc(self.outAFuncArg, node)
+
+
+	###########################################################################
 	## METHOD DECLARATION STUFF											  ##
 	###########################################################################
 	def inAMethodSig(self, node):
@@ -246,22 +294,9 @@ class CodeGenx86(DepthFirstAdapter):
 		self.writeAsmText('popl %ebp')            # restore old %ebp
 		self.writeAsmText('ret')
 	
-	def outAArgList(self, node):
-		''''''
-		self.printFunc(self.outAArgList, node)
-	
-	def outAArgListTail(self, node):
-		''''''
-		self.printFunc(self.outAArgListTail, node)
-	
 	def outAArg(self, node):
 		''''''
 		self.printFunc(self.outAArg, node)
-	
-	def outAMethodVar(self, node):
-		''''''
-		self.printFunc(self.outAMethodVar)
-	
 	
 	###########################################################################
 	## GENERIC VARIABLE DECLARATION STUFF (also includes method return type) ##
@@ -304,6 +339,7 @@ class CodeGenx86(DepthFirstAdapter):
 	def outAKlass(self, node):
 		''''''
 		self.printFunc(self.outAKlass)
+		self.setCurClass('')
 	
 	def inAKlassHeader(self, node):
 		''''''
@@ -351,7 +387,7 @@ class CodeGenx86(DepthFirstAdapter):
 		decl = G.typeMap().var(self.curClass(), self.curMethod(), nm)
 
 		#method return
-		if isinstance(decl, MethodDecl):
+		if isinstance(decl, (MethodDecl, FuncDecl)):
 			self.writeAsmText('popl -4(%ebp)')
 		#local variable
 		elif isinstance(decl, LocalVarDecl):
@@ -691,6 +727,8 @@ class CodeGenx86(DepthFirstAdapter):
 		decl = G.typeMap().method(klass, nm) #FIXME - only allows calls to methods within the same class
 		if not decl:
 			decl = G.typeMap().extern(nm)
+		if not decl:
+			decl = G.typeMap().func(nm)
 		self.writeAsmTextComment(src, ln)
 		self.writeAsmText('call ' + nm)
 		

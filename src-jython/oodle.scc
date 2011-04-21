@@ -131,12 +131,40 @@ Productions
 	    ;
 
 	toplevel               {-> toplevel}
-	    = {klass} klass    {-> New toplevel.klass(klass)}
+	    = {func} func      {-> New toplevel.func(func)}
+	    | {klass} klass    {-> New toplevel.klass(klass)}
 	    | {var} var        {-> New toplevel.var(var)}
 	    | {xtern} xtern    {-> New toplevel.xtern(xtern)}
 	    ; 
 
-	xtern                                                                                     {-> xtern}
+	func_var           {-> var}
+	    = var cr_plus  {-> var.var}
+	    ;
+	    
+	func                                  {-> func}
+	    = func_sig T.kw_is [cr1]:cr_plus
+          func_var*
+          T.kw_begin [cr2]:cr_plus
+          stmt_list
+          T.kw_end T.id     {-> New func(func_sig, [func_var.var], [stmt_list.stmt])}
+         ;
+	    
+	func_sig                                                             {-> func_sig}
+	    = T.id T.misc_l_paren func_arg_list? T.misc_r_paren var_type?    {-> New func_sig(T.id, [func_arg_list.func_arg], var_type.type)}
+	    ;
+	    
+	func_arg_list                         {-> func_arg*}
+	    = func_arg func_arg_list_tail*    {-> [func_arg, func_arg_list_tail.func_arg]}
+	    ;
+	func_arg_list_tail                 {-> func_arg}
+	    = T.misc_semicolon func_arg    {-> func_arg}
+	    ;
+  
+	func_arg                        {-> func_arg}
+	    = T.id T.misc_colon type    {-> New func_arg(T.id, type)}
+	    ;
+
+	xtern                                                                             {-> xtern}
 	    = T.kw_extern T.id T.misc_l_paren xtern_arg_list? T.misc_r_paren var_type?    {-> New xtern(T.id, [xtern_arg_list.xtern_arg], var_type.type)}
 	    ;
 
@@ -193,7 +221,7 @@ Productions
 	method_sig                                                      {-> method_sig}
 	    = T.id T.misc_l_paren arg_list? T.misc_r_paren var_type?    {-> New method_sig(T.id, [arg_list.arg], var_type.type)}
 	    ;
-  
+
 	method                                 {-> method}
 	    = method_sig T.kw_is [cr1]:cr_plus
           method_var*
@@ -328,7 +356,8 @@ Abstract Syntax Tree
 	start = [top]:toplevel*
 	      ;
 
-	toplevel = {klass} [klass]:klass
+	toplevel = {func}  [func]:func
+	         | {klass} [klass]:klass
 	         | {var}   [var]:var
 	         | {xtern} [extern]:xtern
 	         ;
@@ -345,6 +374,15 @@ Abstract Syntax Tree
 
 	var = [id]:T.id [tp]:type? [expr]:expr?
 	    ;
+
+	func_sig = [id]:T.id [args]:func_arg* [ret]:type?
+	         ;
+
+	func = [sig]:func_sig [vars]:var* [stmts]:stmt*
+	     ;
+
+	func_arg = [id]:T.id [tp]:type
+	         ;
 
 	method_sig = [id]:T.id [args]:arg* [ret]:type?
 	           ;

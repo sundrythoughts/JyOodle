@@ -3,6 +3,10 @@
 ~ An implementation of the Oodle Predefined classes
 ~ ---------------------------------------------------------
 
+in : Reader     ~global Reader object
+out : Writer    ~global Writer object
+
+
 class ood is
 
   toString(): string is
@@ -253,6 +257,8 @@ end String
 ~  int io_read( )
 ~ ********************************************
 
+extern io_read() : int
+
 class Reader is 
 
   ~ Read a line from stdin and return it
@@ -317,6 +323,8 @@ end Reader
 ~ an external function in the runtime support library:
 ~  void io_write( )
 ~ ********************************************
+
+extern io_write(c: int)
 
 class Writer is
 

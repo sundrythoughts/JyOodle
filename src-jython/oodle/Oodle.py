@@ -57,6 +57,7 @@ def main():
 	#G.symTab().push('writeint', oodle.Declarations.MethodDecl([oodle.Type.INT], oodle.Type.VOID))
 	#G.typeMap().addKlass(ClassDecl('in')).addMethod(MethodDecl('readint', 'int'))
 	#G.typeMap().addKlass(ClassDecl('out')).addMethod(MethodDecl('writeint')).addParam(LocalVarDecl('i', 'int'))
+	
 	G.typeMap().addExtern(ExternDecl('readint', 'int'))
 	G.typeMap().addExtern(ExternDecl('writeint')).addParam(LocalVarDecl('i', 'int'))
 	

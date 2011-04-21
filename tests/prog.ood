@@ -18,3 +18,9 @@ end Main
 
 class Tester is
 end Tester
+
+writeinteger(j : int) is
+	b : boolean
+begin
+	writeint(j)
+end writeinteger

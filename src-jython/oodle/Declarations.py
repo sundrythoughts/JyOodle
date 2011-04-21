@@ -187,6 +187,86 @@ class ExternDecl(Declaration):
 		'''Set the return type--same as self.setTypeName()'''
 		self.setTypeName(nm)
 
+class FuncDecl(Declaration):
+	''''''
+	def __init__(self, nm, tp_nm='void'):
+		''''''
+		Declaration.__init__(self)
+
+		self.m_param_list = list() #parameters of LocalVarDecl
+		self.m_param_dict = dict() #index on LocalVarDecl.name() into list above
+
+		self.m_var_list = list() #vars of LocalVarDecl
+		self.m_var_dict = dict() #index on LocalVarDecl.name() into list above
+
+		self.setName(nm)
+		self.setTypeName(tp_nm)
+		
+		# 8 for non object oriented
+		self.m_param_offset_cnt = 8  	
+		self.m_local_offset_cnt = -8
+	
+	def __str__(self):
+		'''Get FuncDecl as string'''
+		s = self.typeName() + ' '
+		s += self.name()
+		s = s + '(' + ', '.join([str(t) for t in self.m_param_list]) + ')'
+		for v in self.m_var_list:
+			s = s + '\n\t' + str(v)
+		return s 
+	
+	def __eq__(self, d):
+		'''Check for MethodDecl equivalence'''
+		if not isinstance(d, FuncDecl):
+			return False
+		return (self.m_arg_types == d.m_arg_types) and (self.m_ret_type == d.m_ret_type)
+
+	def addParam(self, p):
+		'''Add a LocalVarDecl param'''
+		p.setOffset(self.m_param_offset_cnt) #set offset
+		self.m_param_list.append(p)
+		self.m_param_dict[p.name()] = self.m_param_list[-1]
+		self.m_param_offset_cnt += 4 #increment offset by 4
+		return p
+
+	def param(self, nm):
+		'''Get param by name or None if name is not valid'''
+		return self.m_param_dict[nm] if nm in self.m_param_dict else None
+	
+	def params(self):
+		'''Get the param list'''
+		return self.m_param_list
+
+	def addVar(self, var_decl):
+		'''Add a LocalVarDecl variable'''
+		var_decl.setOffset(self.m_local_offset_cnt) #set offset
+		self.m_var_list.append(var_decl)
+		self.m_var_dict[var_decl.name()] = self.m_var_list[-1]
+		self.m_local_offset_cnt -= 4 #decrement offset by 4
+		return var_decl
+
+	def var(self, nm):
+		'''Get variable by name or None if name is not valid'''
+		return self.m_var_dict[nm] if nm in self.m_var_dict else None
+
+	def vars(self):
+		'''Get the variable list'''
+		return self.m_var_list
+
+	def retVar(self, nm):
+		'''Get the return variable name (name of the method)'''
+		if self.typeName() != 'void' and nm == self.name():
+			return self
+		return None
+
+	def exists(self, nm):
+		'''does variable name already exist in this scope'''		
+		#check for name in local var list and parameter list
+		#check for return type and if so, is nm == function name
+		if nm in self.m_var_dict or nm in self.m_param_dict or self.retVar(nm):
+			return True
+		return False
+
 class MethodDecl(Declaration):
 	''''''
 	def __init__(self, nm, tp_nm='void'):

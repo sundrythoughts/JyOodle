@@ -39,7 +39,7 @@ class TypeMapBuilder(DepthFirstAdapter):
 	def __init__(self):
 		DepthFirstAdapter.__init__(self)
 		self.m_cur_class = ""    #holds the name of the current class
-		self.m_cur_method = ""   #holds the name of the current method
+		self.m_cur_method = ""   #holds the name of the current method/function
 	
 	###########################################################################
 	## Methods to help with debugging                                        ##
@@ -69,6 +69,64 @@ class TypeMapBuilder(DepthFirstAdapter):
 	def setCurMethod(self, nm):
 		''''''
 		self.m_cur_method = nm
+
+	###########################################################################
+	## FUNCTION DECLARATION STUFF                                            ##
+	###########################################################################
+	def inAFuncSig(self, node):
+		''''''
+		self.printFunc(self.inAFuncSig, node)
+
+		tp_map = G.typeMap()
+		nm = node.getId().getText()
+		if tp_map.funcExists(nm):
+			G.errors().semantic().add("function '" + nm + "' already exists", ln)
+		else:
+			tp_map.addFunc(FuncDecl(nm))
+
+		#FIXME - maybe this should be inside the 'else' clause above
+		self.setCurMethod(nm)
+
+		ln = node.getId().getLine()
+		
+		func = tp_map.func(self.curMethod())
+		if node.getRet():
+			tp = node.getRet().getTp().getText()
+			func.setTypeName(tp) #set the return type name
+
+	def inAFuncArg(self, node):
+		''''''
+		self.printFunc(self.inAFuncArg, node)
+		ln = node.getId().getLine()
+		tp_map = G.typeMap()
+		func = tp_map.func(self.curMethod())
+		nm = node.getId().getText()
+		tp = node.getTp().getTp().getText()
+		if func.exists(nm):
+			G.errors().semantic().add("variable '" + nm + "' already exists", ln)
+		else:
+			var_decl = LocalVarDecl(nm, tp)
+			func.addParam(var_decl) #add var to TypeMap
+
+	def outAFunc(self, node):
+		''''''
+		self.printFunc(self.outAFunc)
+		tp_map = G.typeMap()
+		func = tp_map.func(self.curMethod())
+		
+		#add all local vars to the TypeMap
+		vars = node.getVars()
+		for v in vars:
+			ln = v.getId().getLine()
+			nm = v.getId().getText()
+			tp = ""
+			if v.getTp():
+				tp = v.getTp().getTp().getText()
+			if func.exists(nm):
+				G.errors().semantic().add("variable '" + nm + "' already exists", ln)
+			else:
+				var_decl = LocalVarDecl(nm, tp)
+				func.addVar(var_decl) #add var to TypeMap
 
 	###########################################################################
 	## METHOD DECLARATION STUFF                                              ##
@@ -123,6 +181,7 @@ class TypeMapBuilder(DepthFirstAdapter):
 			else:
 				var_decl = LocalVarDecl(nm, tp)
 				meth.addVar(var_decl) #add var to TypeMap
+		self.setCurMethod('')
 
 	###########################################################################
 	## CLASS DECLARATION STUFF                                               ##
@@ -169,6 +228,10 @@ class TypeMapBuilder(DepthFirstAdapter):
 			else:
 				var_decl = InstanceVarDecl(nm, tp)
 				klass.addVar(var_decl) #add var to TypeMap
+
+	def outAKlass(self, node):
+		self.printFunc(self.outAKlass, node)
+		self.setCurClass('')
 
 	def inAVarToplevel(self, node):
 		''''''

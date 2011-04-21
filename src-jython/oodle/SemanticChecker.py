@@ -120,6 +120,38 @@ class SemanticChecker(DepthFirstAdapter):
 			print k,':',self.typeMap[k]
 
 	###########################################################################
+	## FUNCTION DECLARATION STUFF                                            ##
+	###########################################################################
+	def inAFuncSig(self, node):
+		''''''
+		self.printFunc(self.inAFuncSig, node)
+		nm = node.getId().getText() #get the method name
+		ln = node.getId().getLine()
+		self.setCurMethod(nm)
+
+	def outAFuncArg(self, node):
+		'''Manage function 'arg'
+		   Error Conditions:'''
+		self.printFunc(self.outAFuncArg, node)
+		nm = node.getId().getText() #get the variable name
+
+		tp = self.typeMap[node.getTp()]   #get the variable type from the child node
+		self.typeMap[node] = tp           #store this nodes type
+
+	def outAFunc(self, node):
+		''''''
+		self.printFunc(self.outAFunc)
+		vars = node.getVars()
+		
+		#HACK - local variable init is unsupported in MiniOodle
+		sloc = -8
+		for v in vars:
+			ln = v.getId().getLine() #line number
+			if v.getExpr() != None:
+				G.errors().semantic().addUnsupportedFeature("local variable initialization", ln)
+		self.setCurMethod("")
+
+	###########################################################################
 	## METHOD DECLARATION STUFF                                              ##
 	###########################################################################
 	def outAMethod(self, node):
@@ -134,6 +166,7 @@ class SemanticChecker(DepthFirstAdapter):
 			ln = v.getId().getLine() #line number
 			if v.getExpr() != None:
 				G.errors().semantic().addUnsupportedFeature("local variable initialization", ln)
+		self.setCurMethod("")
 
 	def inAMethodSig(self, node):
 		'''Check method signature
@@ -264,6 +297,11 @@ class SemanticChecker(DepthFirstAdapter):
 		ln = id.getLine() #line number
 		self.setCurClass(nm)
 
+	def outAKlass(self, node):
+		''''''
+		self.printFunc(self.outAKlass, node)
+		self.setCurClass("")
+
 	def inAKlassInherits(self, node):
 		'''Manage inheritance
 		   Error Conditions:
@@ -301,10 +339,10 @@ class SemanticChecker(DepthFirstAdapter):
 		tp_rhs = self.typeMap[node.getExpr()]
 		
 		#id does not exist or is not a variable or method
-		if decl == None or not isinstance(decl, (VarDecl, MethodDecl)):
+		if decl == None or not isinstance(decl, (VarDecl, MethodDecl, FuncDecl)):
 			G.errors().semantic().add("'" + nm + "' does not exist", ln)
 		#id exists and is a variable or method
-		elif isinstance(decl, (VarDecl, MethodDecl)):
+		elif isinstance(decl, (VarDecl, MethodDecl, FuncDecl)):
 			tp_lhs = G.typeMap().klass(decl.typeName())
 		
 		#check for equivalent types
@@ -772,12 +810,14 @@ class SemanticChecker(DepthFirstAdapter):
 			klass = self.curClass()
 		decl = G.typeMap().method(klass, nm) #FIXME - only allows calls to methods within the same class
 		if not decl:
+			decl = G.typeMap().func(nm)
+		if not decl:
 			decl = G.typeMap().extern(nm)
 		ls_args = [self.typeMap[a] for a in node.getArgs()]
 
 		tp_ret = Type.NONE
 		#id does not exist or is not a method id
-		if decl == None or not isinstance(decl, (MethodDecl, ExternDecl)):
+		if decl == None or not isinstance(decl, (MethodDecl, ExternDecl, FuncDecl)):
 			G.errors().semantic().add("method '" + nm + "' does not exist", ln)
 		#check for correct number and type of parameters
 		elif len(ls_args) > 0:

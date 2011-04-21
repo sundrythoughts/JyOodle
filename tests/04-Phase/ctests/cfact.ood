@@ -1,6 +1,18 @@
 ~ CFact.ood
 ~ - Implements recursive factorial algorithm
 
+factorial(num: int) : int is
+	answer: int
+begin
+    writeint(num)
+    if num = 0 then    
+      answer := 1
+    else
+      answer := num * factorial(num - 1)
+    end if
+    factorial := answer
+end factorial
+
 class CFact is
 
  num: int
@@ -33,7 +45,7 @@ class CFact is
   start() is
   begin 
     Go()
-    num2 := Fact(num)
+    num2 := factorial(num)
     ~out.writeint(num)   ~ Original number
     writeint(num)
     ~out.writeint(num2)  ~ factorial of num

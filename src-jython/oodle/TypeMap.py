@@ -43,6 +43,32 @@ class TypeMap:
 		self.m_glb_var_list = list()
 		self.m_glb_var_dict = dict()
 
+		self.m_func_list = list()
+		self.m_func_dict = dict()
+
+	def addFunc(self, f_decl):
+		'''add a FuncDecl to the TypeMap'''
+		nm = f_decl.name()
+		if self.funcExists(nm):
+			return self.func(nm)
+		self.m_func_list.append(f_decl)
+		self.m_func_dict[nm] = self.m_func_list[-1]
+		return f_decl
+
+	def func(self, nm):
+		'''get function by name or None if name is invalid'''
+		return self.m_func_dict[nm] if nm in self.m_func_dict else None
+	
+	def funcs(self):
+		'''get list of functions'''
+		return self.m_func_list	
+
+	def funcExists(self, nm):		
+		'''does function name already exist in this scope'''
+		if nm in self.m_func_dict:
+			return True
+		return False
+
 	def addGlbVar(self, glb_decl):
 		'''add a GlobalVarDecl to the TypeMap'''
 		nm = glb_decl.name()
@@ -129,32 +155,55 @@ class TypeMap:
 	def retVar(self, cl_nm, meth_nm, var_nm):
 		'''Find a MethodDecl which is the return variable given class name,
 		   method name, and variable name'''
-		cl = self.klass(cl_nm)
-		if not cl:
-			return None
-		meth = cl.method(meth_nm)
-		if not meth:
-			return None
-		var = meth.retVar(var_nm) #get method return value
-		return var #may be None
+		#global functions
+		if cl_nm == '':
+			func = self.func(meth_nm)
+			if not func:
+				return None
+			var = func.retVar(var_nm)
+			return var
+		#methods
+		else:
+			cl = self.klass(cl_nm)
+			if not cl:
+				return None
+			meth = cl.method(meth_nm)
+			if not meth:
+				return None
+			var = meth.retVar(var_nm) #get method return value
+			return var #may be None
 	
 	def localVar(self, cl_nm, meth_nm, var_nm):
 		'''Find a LocalVarDecl given a class name, method name, and variable name
 		   Otherwise return None'''
-		cl = self.klass(cl_nm)
-		if not cl:
-			return None
-		meth = cl.method(meth_nm)
-		if not meth:
-			return None
-		var = meth.var(var_nm) #check in method locals list
-		if not var:
-			var = meth.param(var_nm) #check in method parameter list
-		return var #may be None
+		#global functions
+		if cl_nm == '':
+			func = self.func(meth_nm)
+			print str(func)
+			if not func:
+				return None
+			var = func.var(var_nm)
+			if not var:
+				var = func.param(var_nm)
+			return var
+		#methods
+		else:
+			cl = self.klass(cl_nm)
+			if not cl:
+				return None
+			meth = cl.method(meth_nm)
+			if not meth:
+				return None
+			var = meth.var(var_nm) #check in method locals list
+			if not var:
+				var = meth.param(var_nm) #check in method parameter list
+			return var #may be None
 
 	def instVar(self, cl_nm, var_nm):
 		'''Find an InstanceVarDecl given a class name and variable name
 		   Otherwise return None'''
+		if cl_nm == '':
+			return None
 		cl = self.klass(cl_nm)
 		if not cl:
 			return None
@@ -179,6 +228,8 @@ class TypeMap:
 			s = s + str(e) + '\n'
 		for v in self.m_glb_var_list:
 			s = s + str(v) + '\n'
+		for f in self.m_func_list:
+			s = s + str(f) + '\n'
 		for c in self.m_klass_list:
 			s += str(c)
 		return s
