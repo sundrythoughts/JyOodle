@@ -117,20 +117,26 @@ Ignored Tokens
   line_cont, blank, comment;
   
 Productions
-	start                                        {-> start}
-	    = [cr1]:cr_star xtern_list klass_list    {-> New start([xtern_list.xtern], [klass_list.klass])}
+	start                          {-> start}
+	    = cr_star toplevel_list    {-> New start([toplevel_list.toplevel])}
 	    ;
-  
+
 	cr_star = T.eol*;
   
 	cr_plus = T.eol+;
 
-	xtern_list      {-> xtern*}
-	    = xtern*    {-> [xtern.xtern]}
+	toplevel_list                                                 {-> toplevel*}
+	    = {single} [head]:toplevel cr_star                        {-> [head.toplevel]}
+	    | {multi} [head]:toplevel cr_plus [tail]:toplevel_list    {-> [head.toplevel, tail.toplevel]}
 	    ;
 
+	toplevel               {-> toplevel}
+	    = {xtern} xtern    {-> New toplevel.xtern(xtern)}
+	    | {klass} klass    {-> New toplevel.klass(klass)}
+	    ; 
+
 	xtern                                                                                     {-> xtern}
-	    = T.kw_extern T.id T.misc_l_paren xtern_arg_list? T.misc_r_paren var_type? cr_plus    {-> New xtern(T.id, [xtern_arg_list.xtern_arg], var_type.type)}
+	    = T.kw_extern T.id T.misc_l_paren xtern_arg_list? T.misc_r_paren var_type?    {-> New xtern(T.id, [xtern_arg_list.xtern_arg], var_type.type)}
 	    ;
 
 	xtern_arg_list                          {-> xtern_arg*}
@@ -142,11 +148,6 @@ Productions
   
 	xtern_arg                       {-> xtern_arg}
 	    = T.id T.misc_colon type    {-> New xtern_arg(T.id, type)}
-	    ;
-
-	klass_list                                              {-> klass*}
-	    = {single} [head]:klass cr_star                     {-> [head.klass]}
-	    | {multi} [head]:klass cr_plus [tail]:klass_list    {-> [head.klass, tail.klass]}
 	    ;
 
 	klass                 {-> klass}
@@ -323,8 +324,12 @@ Productions
 	    ;
 
 Abstract Syntax Tree
-	start = [externs]:xtern* [klasses]:klass*
+	start = [top]:toplevel*
 	      ;
+
+	toplevel = {klass} [klass]:klass
+	         | {xtern} [extern]:xtern
+	         ;
 
 	xtern = [id]:T.id [args]:xtern_arg* [ret]:type?;
 	xtern_arg = [id]:T.id [tp]:type;

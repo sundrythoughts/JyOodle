@@ -1,7 +1,4 @@
-~ This is a comment
-
 extern writeint(i : int)
-extern readint() : int
 
 class Main is
 	func(p:int) : int is
@@ -16,3 +13,8 @@ class Main is
 	begin
 	end start
 end Main
+
+extern readint() : int
+
+class Tester is
+end Tester
