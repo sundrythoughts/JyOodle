@@ -207,6 +207,18 @@ class CodeGenx86(DepthFirstAdapter):
 	###########################################################################
 	## FUNCTION DECLARATION STUFF											 ##
 	###########################################################################
+	def inAVarToplevel(self, node):
+		''''''
+		v = node.getVar()
+		ln = v.getId().getLine() #line number
+		src = v.toString().strip()
+		nm = self.prefix() + v.getId().getText() #variable name
+		self.writeAsmComment('#' + src, ln)
+		self.writeAsm('\t.comm\t' + nm + ',4,4') #global class variable
+
+	###########################################################################
+	## FUNCTION DECLARATION STUFF											 ##
+	###########################################################################
 	def inAFuncSig(self, node):
 		''''''
 		self.printFunc(self.inAFuncSig, node)
@@ -719,16 +731,18 @@ class CodeGenx86(DepthFirstAdapter):
 		nm = node.getId().getText()
 		klass = None
 		if node.getExpr():
-			klass = self.typeMap[node.getExpr()]
+			pass
+			#id_nm = node.getExpr().getId().getText()
+			#klass = self.typeMap[node.getExpr()]
 		if klass:
 			klass = klass.typeName()
 		else:
 			klass = self.curClass()
 		decl = G.typeMap().method(klass, nm) #FIXME - only allows calls to methods within the same class
 		if not decl:
-			decl = G.typeMap().extern(nm)
-		if not decl:
 			decl = G.typeMap().func(nm)
+		if not decl:
+			decl = G.typeMap().extern(nm)
 		self.writeAsmTextComment(src, ln)
 		self.writeAsmText('call ' + nm)
 		

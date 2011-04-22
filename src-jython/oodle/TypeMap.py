@@ -179,7 +179,6 @@ class TypeMap:
 		#global functions
 		if cl_nm == '':
 			func = self.func(meth_nm)
-			print str(func)
 			if not func:
 				return None
 			var = func.var(var_nm)

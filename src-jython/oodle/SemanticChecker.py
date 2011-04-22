@@ -335,6 +335,8 @@ class SemanticChecker(DepthFirstAdapter):
 		ln = node.getId().getLine()
 		nm = node.getId().getText()
 		decl = G.typeMap().var(self.curClass(), self.curMethod(), nm)
+		if not decl:
+			decl = G.typeMap().glbVar(nm)
 		tp_lhs = Type.NONE
 		tp_rhs = self.typeMap[node.getExpr()]
 		
@@ -411,16 +413,16 @@ class SemanticChecker(DepthFirstAdapter):
 		self.printFunc(self.outAIdExpr, node)
 		nm = node.getId().getText()
 		decl = G.typeMap().var(self.curClass(), self.curMethod(), nm)
+		if not decl:
+			decl = G.typeMap().glbVar(nm)
 		ln = node.getId().getLine()
 		
 		tp = Type.NONE
 		#HACK - MiniOodle classes of 'in' and 'out'
-		#if nm == 'out':
-		#	pass
-		#elif nm == 'in':
-		#	pass
+		if nm in ['in', 'out']:
+			pass
 		#id is undefined
-		if decl == None:
+		elif decl == None:
 			G.errors().semantic().add("undefined variable '" + nm + "'", ln)
 		else:
 			tp = G.typeMap().klass(decl.typeName())

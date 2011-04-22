@@ -52,17 +52,9 @@ def main():
 		print "  java Oodle filename"
 		return
 
-	#FIXME - HUGE HACK for readint/writeint
-	#G.symTab().push('readint', oodle.Declarations.MethodDecl([oodle.Type.VOID], oodle.Type.INT))
-	#G.symTab().push('writeint', oodle.Declarations.MethodDecl([oodle.Type.INT], oodle.Type.VOID))
-	#G.typeMap().addKlass(ClassDecl('in')).addMethod(MethodDecl('readint', 'int'))
-	#G.typeMap().addKlass(ClassDecl('out')).addMethod(MethodDecl('writeint')).addParam(LocalVarDecl('i', 'int'))
-	
+	#HACK - add readint() and writeint() declarations
 	G.typeMap().addExtern(ExternDecl('readint', 'int'))
 	G.typeMap().addExtern(ExternDecl('writeint')).addParam(LocalVarDecl('i', 'int'))
-	
-	#FIXME - debug printing
-	G.options().setPrintDebug(True)
 
 	G.options().parseArgs(sys.argv[1:])
 
@@ -115,7 +107,6 @@ def main():
 	
 	print 'DONE'
 	
-	#FIXME - debug
 	print str(G.typeMap())
 
 if __name__ == "__main__":

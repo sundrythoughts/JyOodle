@@ -1,26 +1,18 @@
-t : Tester
+sum : int
+bl : boolean
 
-class Main is
-	t:Tester
-	func(p:int) : int is
-		x:int
-		y:boolean
-	begin
-		y := x = 5
-		func := x + p * 5
-	end func
-
-	start() is
-	begin
-		t := new Tester
-	end start
-end Main
-
-class Tester is
-end Tester
-
-writeinteger(j : int) is
-	b : boolean
+start() is
+	i : int
 begin
-	writeint(j)
-end writeinteger
+	i := 1
+	loop while i <= 100
+		sum := sum + addFunc(i, i + 1)
+		i := i + 2
+	end loop
+	writeint(sum)
+end start
+
+addFunc(a : int ; b : int) : int is
+begin
+	addFunc := a + b
+end addFunc
