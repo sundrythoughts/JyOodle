@@ -29,20 +29,24 @@
 from Declarations import *
 
 class TypeMap:
-	''''''
+	'''Store a tree of types'''
 	st_type_map = None #singleton TypeMap instance
 
 	def __init__(self):
 		''''''
+		#class declarations
 		self.m_klass_list = list()
 		self.m_klass_dict = dict()
 		
+		#extern declarations
 		self.m_extern_list = list()
 		self.m_extern_dict = dict()
 		
+		#global variable declarations
 		self.m_glb_var_list = list()
 		self.m_glb_var_dict = dict()
 
+		#global function declarations
 		self.m_func_list = list()
 		self.m_func_dict = dict()
 
@@ -138,14 +142,8 @@ class TypeMap:
 			return True
 		return False
 
-	#FIXME - REPLACED BY "klassExists()" ABOVE
-	#def exists(self, nm):
-	#	'''does name already exist in this scope'''
-	#	if nm in self.m_klass_dict:
-	#		return True
-	#	return False
-
 	def method(self, cl_nm, meth_nm):
+		'''find method in class'''
 		cl = self.klass(cl_nm)
 		if not cl:
 			return None
@@ -210,6 +208,7 @@ class TypeMap:
 		return var
 
 	def var(self, cl_nm, meth_nm, var_nm):
+		'''find a variable scoped to a given class and method'''
 		v = self.localVar(cl_nm, meth_nm, var_nm)
 		if v:
 			return v
@@ -221,7 +220,7 @@ class TypeMap:
 			
 
 	def __str__(self):
-		''''''
+		'''convert the TypeMap to a nicely formated string'''
 		s = ""
 		for e in self.m_extern_list:
 			s = s + str(e) + '\n'
@@ -241,6 +240,7 @@ class TypeMap:
 		return TypeMap.st_type_map
 
 class Type:
+	'''Declare builtin types'''
 	#declare builtin types
 	BOOLEAN   = TypeMap.typeMap().addKlass(ClassDecl('boolean'))
 	INT    = TypeMap.typeMap().addKlass(ClassDecl('int'))

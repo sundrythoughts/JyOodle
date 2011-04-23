@@ -78,18 +78,13 @@ def main():
 		G.errors().printErrors()
 		return
 
+	#Pass 1
 	#build the TypeMap for all the input
 	print 'Building Type Map...'
 	tp_map_builder = TypeMapBuilder()
 	st_node.apply(tp_map_builder)  #invoke TypeMapBuilder traversal
-	
-	#FIXME - debug stuff
-	
-	#if G.errors().hasErrors():
-	#	print str(G.typeMap())
-	#	G.errors().printErrors()
-	#	return
 
+	#Pass 2
 	#perform semantic checks (new code)
 	print 'Error Checking...'
 	sem_check = SemanticChecker()
@@ -106,8 +101,6 @@ def main():
 	code_gen.buildBinary(G.options().generateAssembly())
 	
 	print 'DONE'
-	
-	print str(G.typeMap())
 
 if __name__ == "__main__":
 	main()

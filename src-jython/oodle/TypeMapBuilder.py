@@ -34,8 +34,8 @@ from oodle.TypeMap import *
 
 class TypeMapBuilder(DepthFirstAdapter):
 	'''Build the TypeMap which will be used during semantic checking.
-	   Only produces an error when an identifier is used multiple times in the
-	   same scope.'''
+	   Only produces an error when an identifier is declared multiple times in
+	   the same scope.'''
 	def __init__(self):
 		DepthFirstAdapter.__init__(self)
 		self.m_cur_class = ""    #holds the name of the current class

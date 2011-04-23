@@ -51,19 +51,19 @@ class CodeGenx86(DepthFirstAdapter):
 	## Utility methods                                                       ##
 	###########################################################################
 	def curClass(self):
-		''''''
+		'''Get current class scope (class name)'''
 		return self.m_cur_class;
 	
 	def setCurClass(self, nm):
-		''''''
+		'''Set current class scope (class name)'''
 		self.m_cur_class = nm
 		
 	def curMethod(self):
-		''''''
+		'''Get current method/function scope (method/function name)'''
 		return self.m_cur_method
 	
 	def setCurMethod(self, nm):
-		''''''
+		'''Set current method/function scope (method function name)'''
 		self.m_cur_method = nm
 
 	def prefix(self):
@@ -137,8 +137,6 @@ class CodeGenx86(DepthFirstAdapter):
 		asm_fn = fn + '.s'
 		bin_fn = fn
 		f = file(asm_fn, 'w')
-
-		
 		
 		#write asm to .s file
 		for l in self.asm_list:
@@ -153,7 +151,12 @@ class CodeGenx86(DepthFirstAdapter):
 			f.write(l)
 			f.write('\n')
 		f.flush()
-		
+		f.close()
+
+		#do not build the binary if -S is given
+		if sopt:
+			return
+
 		#compile asm with stdlib.c
 		proc = subprocess.Popen(['gcc', '-g', '-m32', '-o', bin_fn, 'stdlib.c', asm_fn])
 		proc.wait()
@@ -162,9 +165,6 @@ class CodeGenx86(DepthFirstAdapter):
 			print 'GCC Error Output:'
 			print '------------------'
 			print proc.stderr
-
-		if not sopt:
-			os.remove(asm_fn)
 
 	def nextLabel(self):
 		'''generate a unique label'''
@@ -208,7 +208,7 @@ class CodeGenx86(DepthFirstAdapter):
 	## FUNCTION DECLARATION STUFF											 ##
 	###########################################################################
 	def inAVarToplevel(self, node):
-		''''''
+		'''global variables'''
 		v = node.getVar()
 		ln = v.getId().getLine() #line number
 		src = v.toString().strip()
@@ -220,7 +220,7 @@ class CodeGenx86(DepthFirstAdapter):
 	## FUNCTION DECLARATION STUFF											 ##
 	###########################################################################
 	def inAFuncSig(self, node):
-		''''''
+		'''global function signature'''
 		self.printFunc(self.inAFuncSig, node)
 		
 		ln = node.getId().getLine()
@@ -233,7 +233,7 @@ class CodeGenx86(DepthFirstAdapter):
 		self.writeAsmTextFunc(nm)
 
 	def outAFuncSig(self, node):
-		''''''
+		'''global function signature'''
 		self.printFunc(self.outAFuncSig, node)
 		mem = -4
 		vars = node.parent().getVars()
@@ -247,11 +247,11 @@ class CodeGenx86(DepthFirstAdapter):
 			self.writeAsmText('movl $0, ' + str(v) + '(%ebp)')
 
 	def inAFunc(self, node):
-		''''''
+		'''global function'''
 		self.printFunc(self.inAFunc)
 
 	def outAFunc(self, node):
-		''''''
+		'''global function'''
 		self.printFunc(self.outAFunc)
 		self.writeAsmText('movl -4(%ebp), %eax')  # put return value in %eax
 		self.writeAsmText('movl %ebp, %esp')      # delete local variables
@@ -260,7 +260,7 @@ class CodeGenx86(DepthFirstAdapter):
 		self.setCurMethod('')                     #leave scope of current method/func
 
 	def outAFuncArg(self, node):
-		''''''
+		'''global function arguments'''
 		self.printFunc(self.outAFuncArg, node)
 
 
@@ -268,7 +268,7 @@ class CodeGenx86(DepthFirstAdapter):
 	## METHOD DECLARATION STUFF											  ##
 	###########################################################################
 	def inAMethodSig(self, node):
-		''''''
+		'''class method signature'''
 		self.printFunc(self.inAMethodSig, node)
 		
 		ln = node.getId().getLine()
@@ -281,13 +281,13 @@ class CodeGenx86(DepthFirstAdapter):
 		self.writeAsmTextFunc(nm)
 
 	def outAMethodSig(self, node):
-		''''''
+		'''class method signature'''
 		self.printFunc(self.outAMethodSig, node)
 		mem = -4
 		vars = node.parent().getVars()
 		if len(vars) > 0:
 			mem = G.typeMap().method(self.curClass(), self.curMethod()).vars()[-1].offset()
-			#mem = G.symMap()[vars[-1]].decl().offset()
+
 		self.writeAsmText('pushl %ebp')
 		self.writeAsmText('movl %esp, %ebp')
 		self.writeAsmText('addl $(' + str(mem) + '), %esp')
@@ -295,11 +295,11 @@ class CodeGenx86(DepthFirstAdapter):
 			self.writeAsmText('movl $0, ' + str(v) + '(%ebp)')
 
 	def inAMethod(self, node):
-		''''''
+		'''class method'''
 		self.printFunc(self.inAMethod)
 
 	def outAMethod(self, node):
-		''''''
+		'''class method'''
 		self.printFunc(self.outAMethod)
 		self.writeAsmText('movl -4(%ebp), %eax')  # put return value in %eax
 		self.writeAsmText('movl %ebp, %esp')      # delete local variables
@@ -307,7 +307,7 @@ class CodeGenx86(DepthFirstAdapter):
 		self.writeAsmText('ret')
 	
 	def outAArg(self, node):
-		''''''
+		'''class method args'''
 		self.printFunc(self.outAArg, node)
 	
 	###########################################################################
